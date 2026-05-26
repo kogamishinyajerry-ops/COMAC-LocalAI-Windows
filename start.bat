@@ -21,9 +21,18 @@ echo ==============================================================
 echo.
 
 REM ============================================================================
-REM  0. 创建必要目录（首次运行）
+REM  0. 检查 .venv 和目录
 REM ============================================================================
-echo [0/4] 检查目录结构...
+echo [0/4] 检查运行环境...
+
+if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+    echo   [错误] .venv 不存在
+    echo   请先在有网机器运行 pre-deploy.bat
+    echo   或将完整项目目录从有网机器复制过来
+    pause
+    exit /b 1
+)
+echo         [OK] .venv 存在
 
 for %%d in (
     "temp\uploads"
@@ -32,11 +41,9 @@ for %%d in (
     "logs"
     "docs"
 ) do (
-    if not exist "%%~d" (
-        mkdir "%%~d" 2>nul
-    )
+    if not exist "%%~dd" mkdir "%%~dd" 2>nul
 )
-echo    [OK] 目录就绪
+echo         [OK] 目录就绪
 echo.
 
 REM ============================================================================
@@ -102,36 +109,25 @@ echo         [OK] qwen 模型就绪
 echo.
 
 REM ============================================================================
-REM  3. 初始化 Gradio 认证（首次运行引导）
+REM  3. 检查 Gradio 认证（从 .env 读取）
 REM ============================================================================
 echo [3/4] 检查访问认证...
 
-if not defined GRADIO_USER (
-    echo         首次部署引导 - 设置管理员账号
-    echo         （内网安全：请设置强密码，完成后按 Enter）
-    echo.
-    set /p "_NEW_USER=请输入管理员用户名 [默认: admin]: "
-    if "!_NEW_USER!"=="" set "_NEW_USER=admin"
-
-    :getpass
-    set /p "_NEW_PASS=请输入密码 (不可见): "
-    if "!_NEW_PASS!"=="" goto :getpass
-
-    set "GRADIO_USER=!_NEW_USER!"
-    set "GRADIO_PASS=!_NEW_PASS!"
-
-    echo         密码已设置。下次运行自动生效（无需重复设置）
-    echo         GRADIO_USER=!GRADIO_USER!
-    echo.
-    echo         [提示] 如需修改密码，请重新运行 start.bat 或设置环境变量
-    echo.
+if exist ".env" (
+    for /f "usebackq eol=# tokens=1,* delims==" %%a in (.env) do (
+        if "%%a"=="GRADIO_USER" set "GRADIO_USER=%%b"
+        if "%%a"=="GRADIO_PASS" set "GRADIO_PASS=%%b"
+    )
 )
 
 if defined GRADIO_USER if defined GRADIO_PASS (
     echo         [OK] 认证已配置 (用户: %GRADIO_USER%)
+    if "!GRADIO_PASS!"=="change_me_123" (
+        echo         [警告] 密码仍为默认值，请修改 .env 中的 GRADIO_PASS
+    )
 ) else (
-    echo         [警告] 未配置认证，请设置 GRADIO_USER 和 GRADIO_PASS 环境变量
-    echo                  或直接运行 start.bat 交互设置
+    echo         [警告] 未找到认证信息
+    echo         请在 .env 中设置 GRADIO_USER 和 GRADIO_PASS
 )
 echo.
 
