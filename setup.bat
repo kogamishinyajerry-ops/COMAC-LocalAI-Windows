@@ -49,14 +49,20 @@ echo ==============================================================
 
 set "BUNDLE_PY=tools\python\python.exe"
 
-REM 修改 python3._pth 解除 site-packages 限制
-set "PTH_FILE=tools\python\python3._pth"
-if exist "%PTH_FILE%" (
-    findstr /C:"import site" "%PTH_FILE%" >nul 2>&1
+REM 修改 python311._pth（Python 3.11 使用此文件名）解除 site-packages 限制
+REM 注意：Embedding 版本的 pth 文件默认 #import site（注释），需取消注释
+for %%f in ("tools\python\python311._pth" "tools\python\python3._pth") do (
+    if exist "%%~ff" (
+        set "PTH_FILE=%%~ff"
+        goto :found_pth
+    )
+)
+:found_pth
+if defined PTH_FILE (
+    findstr /R "^import site" "%PTH_FILE%" >nul 2>&1
     if errorlevel 1 (
         echo         启用 site-packages...
-        echo. >> "%PTH_FILE%"
-        echo import site >> "%PTH_FILE%"
+        echo import site>> "%PTH_FILE%"
     )
 )
 
@@ -64,9 +70,12 @@ REM 优先从本地 wheel 安装 pip（离线模式，无需互联网）
 if not exist "tools\python\Scripts\pip.exe" (
     echo         尝试从本地 wheel 安装 pip（离线模式）...
 
-    REM 方法1: 使用 pip wheel 文件（推荐）
-    if exist "python-wheels\pip-" (
+    REM 方法1: 检查 python-wheels\ 是否有 pip wheel 文件
+    dir /b "%SCRIPT_DIR%python-wheels\pip-"*.whl >nul 2>&1
+    if not errorlevel 1 (
+        echo         发现本地 pip wheel，从 python-wheels\ 安装（无需网络）...
         "%BUNDLE_PY%" -m pip install --no-index --find-links="python-wheels" pip --quiet --force-reinstall 2>nul
+        if not errorlevel 1 goto :pip_installed
     )
 
     REM 方法2: 使用 get-pip.py（需要互联网，首次运行会下载 pip）
@@ -76,6 +85,7 @@ if not exist "tools\python\Scripts\pip.exe" (
             "%BUNDLE_PY%" "tools\pip-wheels\get-pip.py" --no-warn-script-location >nul 2>&1
         )
     )
+    :pip_installed
 )
 
 REM 验证 pip
@@ -169,6 +179,7 @@ echo ==============================================================
 echo   [6/9] 启动 Ollama 服务
 echo ==============================================================
 
+if not exist "logs" mkdir logs 2>nul
 set "OLLAMA_SERVE=tools\ollama\ollama.exe serve"
 set "OLLAMA_HOST=localhost:11434"
 
