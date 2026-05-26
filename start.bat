@@ -45,12 +45,24 @@ REM ============================================================================
 echo [1/4] 检查 Ollama 服务...
 
 set "OLLAMA_HOST=localhost:11434"
+set "OLLAMA_BIN=tools\ollama\ollama.exe"
+
+REM 优先使用内置 Ollama，否则尝试系统 PATH
+if exist "%OLLAMA_BIN%" (
+    set "OLLAMA_CMD=%OLLAMA_BIN%"
+) else (
+    set "OLLAMA_CMD=ollama"
+)
 
 curl -s --connect-timeout 3 "http://%OLLAMA_HOST%/api/version" >nul 2>&1
 if not errorlevel 1 goto :ollama_ok
 
 echo         Ollama 未运行，正在启动...
-start /B ollama serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
+if exist "%OLLAMA_BIN%" (
+    start /B "%OLLAMA_BIN%" serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
+) else (
+    start /B ollama serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
+)
 
 REM 等待 Ollama 启动（最多 30 秒）
 for /L %%i in (1,1,15) do (
@@ -61,7 +73,7 @@ for /L %%i in (1,1,15) do (
 
 echo.
 echo   [错误] Ollama 启动失败
-echo   请检查: 1) Ollama 已安装  2) 运行 setup.bat 初始化模型
+echo   请运行 setup.bat 重新初始化
 echo   日志: logs\ollama.log
 pause
 exit /b 1
@@ -75,8 +87,8 @@ REM  2. 验证 qwen:7b-q4_K_M 模型
 REM ============================================================================
 echo [2/4] 验证模型 (qwen:7b-q4_K_M)...
 
-REM 尝试匹配 qwen 相关模型（支持 qwen:7b-q4_K_M, qwen2.5, qwen:7b 等变体）
-ollama list 2>nul | findstr /I "qwen" >nul
+REM 尝试匹配 qwen 相关模型
+%OLLAMA_CMD% list 2>nul | findstr /I "qwen" >nul
 if errorlevel 1 (
     echo.
     echo   [错误] qwen 模型未找到
