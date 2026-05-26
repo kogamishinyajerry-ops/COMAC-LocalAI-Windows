@@ -19,31 +19,86 @@ REM  步骤 1: 检查 Python 环境
 REM ============================================================================
 echo.
 echo ==============================================================
-echo   [1/6] 检查 Python 环境
+echo   [1/7] 检查 Python 环境
 echo ==============================================================
 
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo   [错误] Python 未安装
-    echo   请安装 Python 3.9+: https://www.python.org/downloads/
-    echo   安装时务必勾选 "Add Python to PATH"
+    echo   [错误] Python 未找到
+    echo.
+    echo   请下载安装 Python 3.10 或 3.11:
+    echo   https://www.python.org/ftp/python/
+    echo.
+    echo   安装时请务必勾选: "Add Python to PATH"
+    echo   安装后重新运行此脚本
+    echo.
     pause
     exit /b 1
 )
-echo   [OK] Python 可用
+
+for /f "tokens=2" %%v in ('python --version 2^>^&1') do set "PYVER=%%v"
+echo         检测到 Python %PYVER%
+
+REM 提取主版本号
+for /f "tokens=1,2 delims=." %%a in ("%PYVER%") do (
+    set "PYMAJOR=%%a"
+    set "PYMINOR=%%b"
+)
+if %PYMAJOR% LSS 3 (
+    echo   [错误] Python 版本过低，需要 Python 3.9+
+    pause
+    exit /b 1
+)
+if %PYMAJOR% EQU 3 if %PYMINOR% LSS 9 (
+    echo   [错误] Python 版本过低，需要 Python 3.9+
+    pause
+    exit /b 1
+)
+echo   [OK] Python 版本符合要求
 
 python -m pip --version >nul 2>&1
 if errorlevel 1 (
+    echo   [警告] 尝试初始化 pip...
     python -m ensurepip --upgrade >nul 2>&1
+    if errorlevel 1 (
+        echo   [错误] pip 初始化失败
+        echo   请重新安装 Python，确保 pip 可用
+        pause
+        exit /b 1
+    )
 )
 echo   [OK] pip 可用
 echo.
 
 REM ============================================================================
-REM  步骤 2: 检查 Ollama
+REM  步骤 1b: 检查 Visual C++ Redistributable
 REM ============================================================================
 echo ==============================================================
-echo   [2/6] 检查 Ollama 服务
+echo   [2/7] 检查 Visual C++ 运行时
+echo ==============================================================
+
+REM 检查 VC++ 2015-2022 Redistributable (x64)
+reg query "HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" >nul 2>&1
+if not errorlevel 1 (
+    echo   [OK] Visual C++ Redistributable 已安装
+) else (
+    echo   [警告] 未检测到 Visual C++ Redistributable
+    echo.
+    echo   部分 Python 扩展包需要此运行时
+    echo   下载地址:
+    echo   https://aka.ms/vs/17/release/vc_redist.x64.exe
+    echo.
+    echo   如后续依赖安装报错，请安装上述文件后重试
+    echo   （可跳过此警告继续安装，部分功能可能受限）
+    echo.
+)
+echo.
+
+REM ============================================================================
+REM  步骤 3: 检查 Ollama
+REM ============================================================================
+echo ==============================================================
+echo   [3/7] 检查 Ollama 服务
 echo ==============================================================
 
 where ollama >nul 2>&1
@@ -76,10 +131,10 @@ echo   [OK] Ollama 服务运行中
 echo.
 
 REM ============================================================================
-REM  步骤 3: 下载/准备 qwen:7b-q4_K_M 模型
+REM  步骤 4: 下载/准备 qwen:7b-q4_K_M 模型
 REM ============================================================================
 echo ==============================================================
-echo   [3/6] 准备 qwen:7b-q4_K_M 模型
+echo   [4/7] 准备 qwen:7b-q4_K_M 模型
 echo ==============================================================
 
 REM 检查是否已有 qwen 模型（支持多种命名方式）
@@ -133,10 +188,10 @@ echo   [OK] qwen:7b-q4_K_M 模型下载完成
 echo.
 
 REM ============================================================================
-REM  步骤 4: 下载 nomic-embed-text（向量嵌入模型）
+REM  步骤 5: 下载 nomic-embed-text（向量嵌入模型）
 REM ============================================================================
 echo ==============================================================
-echo   [4/6] 准备向量嵌入模型
+echo   [5/7] 准备向量嵌入模型
 echo ==============================================================
 
 ollama list 2>nul | findstr /C:"nomic-embed-text" >nul
@@ -156,10 +211,10 @@ if not errorlevel 1 (
 echo.
 
 REM ============================================================================
-REM  步骤 5: 安装 Python 依赖
+REM  步骤 6: 安装 Python 依赖（.venv + python-wheels）
 REM ============================================================================
 echo ==============================================================
-echo   [5/6] 安装 Python 依赖
+echo   [6/7] 安装 Python 依赖
 echo ==============================================================
 
 REM 创建虚拟环境
@@ -192,7 +247,18 @@ if exist "python-wheels" (
 if errorlevel 1 (
     echo.
     echo   [错误] 依赖安装失败
-    echo   建议: 检查 python-wheels 目录是否存在，或检查网络连接
+    echo.
+    echo   可能原因及解决方法:
+    echo   1. 内网无法访问 PyPI
+    echo      - 在有网机器上运行 download-wheels.bat 下载离线包
+    echo      - 将 python-wheels\ 目录一起打包到项目中
+    echo   2. 缺少 VC++ Redistributable
+    echo      - 下载: https://aka.ms/vs/17/release/vc_redist.x64.exe
+    echo   3. Python 版本过低
+    echo      - 需要 Python 3.9 或更高版本
+    echo.
+    echo   如仍有问题，可尝试手动安装单个包排查:
+    echo   .venv\Scripts\pip.exe install <包名>
     pause
     exit /b 1
 )
@@ -200,10 +266,10 @@ echo   [OK] 依赖安装完成
 echo.
 
 REM ============================================================================
-REM  步骤 6: 初始化配置
+REM  步骤 8: 初始化配置
 REM ============================================================================
 echo ==============================================================
-echo   [6/6] 初始化配置
+echo   [7/7] 初始化配置
 echo ==============================================================
 
 REM 设置 Ollama 优化参数
