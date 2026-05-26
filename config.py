@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # 模型常量 — 单一 7B 模型策略
 # =============================================================================
-MODEL_COMAC = os.environ.get("COMAC_MODEL", "comac")
+MODEL_COMAC = os.environ.get("COMAC_MODEL", "qwen:7b-q4_K_M")
 MODEL_EMBED = os.environ.get("COMAC_EMBED_MODEL", "nomic-embed-text")
 
 # 统一别名: 所有模块都引用 MODEL_DOC

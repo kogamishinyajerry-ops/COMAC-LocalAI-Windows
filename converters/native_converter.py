@@ -1,4 +1,6 @@
 from pathlib import Path
+import csv
+import re
 from converters.base_converter import BaseConverter, ConversionResult
 
 class NativeConverter(BaseConverter):
@@ -28,7 +30,25 @@ class NativeConverter(BaseConverter):
         import pandas as pd
         try:
             df = pd.read_excel(input_path)
-            df.to_csv(output_path, index=False, encoding="utf-8")
+
+            # 公式注入防护：导出前将公式单元格转为文本
+            # 检测以 =, +, -, @ 开头的内容（Excel 公式特征）
+            formula_pattern = re.compile(r'^[\=+\-@]', re.IGNORECASE)
+
+            for col in df.columns:
+                for idx, val in df[col].items():
+                    if isinstance(val, str) and formula_pattern.match(val.strip()):
+                        # 在公式前加单引号前缀（Excel 会将其识别为文本）
+                        df.at[idx, col] = "'" + val
+
+            df.to_csv(
+                output_path,
+                index=False,
+                encoding="utf-8",
+                quoting=csv.QUOTE_NONNUMERIC,  # 所有非数值用双引号包裹
+                escapechar=' ',
+                na_rep='',
+            )
             return ConversionResult(success=True, output_path=output_path)
         except Exception as e:
             return ConversionResult(success=False, error=str(e))

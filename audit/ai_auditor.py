@@ -1,4 +1,4 @@
-from ollama_client import OllamaClient
+from ollama_client import OllamaClient, MODEL_DOC
 from parsers.parser_factory import ParserFactory
 from dataclasses import dataclass
 from typing import List
@@ -20,7 +20,7 @@ class AuditResult:
 
 class AIAuditor:
     def __init__(self):
-        self.qwen = OllamaClient("qwen2.5")
+        self.qwen = OllamaClient(MODEL_DOC)
         self.parser = ParserFactory()
 
     def audit_document(self, file_path: str, criteria: str = None) -> AuditResult:

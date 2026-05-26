@@ -1,0 +1,182 @@
+/* COMAC AI 文档处理平台 - 品牌样式 */
+/* 国企标准: 庄重、专业、简洁 */
+
+:root {
+    --comac-blue: #1A3A5C;
+    --comac-blue-light: #2A5A8C;
+    --comac-green: #2E7D32;
+    --comac-green-light: #E8F5E9;
+    --comac-bg: #F0F2F5;
+    --comac-white: #FFFFFF;
+    --comac-text: #333333;
+    --comac-text-light: #666666;
+    --comac-border: #E0E0E0;
+    --comac-accent: #1565C0;
+    --comac-warning: #F57C00;
+    --comac-error: #D32F2F;
+}
+
+/* 全局字体 */
+* {
+    font-family: 'Microsoft YaHei', '微软雅黑', -apple-system, sans-serif !important;
+}
+
+/* 标题 */
+.gradio-container h1 {
+    color: var(--comac-blue) !important;
+    font-weight: 700 !important;
+    font-size: 24px !important;
+    border-bottom: 3px solid var(--comac-blue) !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 20px !important;
+}
+
+.gradio-container h2 {
+    color: var(--comac-blue-light) !important;
+    font-weight: 600 !important;
+}
+
+.gradio-container h3 {
+    color: #3A6A9C !important;
+}
+
+/* 主容器 */
+.gradio-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    background: var(--comac-white) !important;
+    min-height: 100vh !important;
+}
+
+/* Tab 样式 */
+.tabs {
+    border: none !important;
+    border-bottom: 2px solid var(--comac-border) !important;
+    margin-bottom: 20px !important;
+}
+
+.tab-nav button {
+    color: var(--comac-text-light) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    padding: 10px 20px !important;
+    border: none !important;
+    background: transparent !important;
+    border-bottom: 3px solid transparent !important;
+    transition: all 0.3s !important;
+}
+
+.tab-nav button.selected {
+    color: var(--comac-blue) !important;
+    border-bottom-color: var(--comac-blue) !important;
+    font-weight: 700 !important;
+}
+
+/* 按钮 */
+.gr-button-primary {
+    background: linear-gradient(135deg, var(--comac-blue) 0%, var(--comac-blue-light) 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    padding: 10px 24px !important;
+    border-radius: 6px !important;
+    transition: all 0.3s !important;
+    box-shadow: 0 2px 8px rgba(26, 58, 92, 0.2) !important;
+}
+
+.gr-button-primary:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(26, 58, 92, 0.3) !important;
+}
+
+.gr-button-secondary {
+    background: var(--comac-white) !important;
+    border: 2px solid var(--comac-blue) !important;
+    color: var(--comac-blue) !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+}
+
+/* 输入框 */
+.gr-textbox input, .gr-textbox textarea {
+    border: 1px solid var(--comac-border) !important;
+    border-radius: 6px !important;
+    padding: 10px !important;
+    font-size: 14px !important;
+}
+
+.gr-textbox input:focus, .gr-textbox textarea:focus {
+    border-color: var(--comac-blue) !important;
+    box-shadow: 0 0 0 3px rgba(26, 58, 92, 0.1) !important;
+}
+
+/* 文件上传区 */
+.gr-file {
+    border: 2px dashed var(--comac-border) !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    text-align: center !important;
+}
+
+/* 下拉框 */
+.gr-dropdown select {
+    border: 1px solid var(--comac-border) !important;
+    border-radius: 6px !important;
+}
+
+/* 状态卡片 */
+.status-card {
+    background: var(--comac-white) !important;
+    border: 1px solid var(--comac-border) !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+}
+
+/* 页脚 */
+footer {
+    text-align: center !important;
+    padding: 20px !important;
+    color: var(--comac-text-light) !important;
+    font-size: 12px !important;
+    border-top: 1px solid var(--comac-border) !important;
+    margin-top: 40px !important;
+}
+
+/* 标签 */
+.tag {
+    display: inline-block !important;
+    background: var(--comac-green-light) !important;
+    color: var(--comac-green) !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    margin: 2px !important;
+}
+
+/* 代码块 */
+pre, code {
+    font-family: 'Consolas', 'Courier New', monospace !important;
+    background: #F5F5F5 !important;
+    border-radius: 4px !important;
+    padding: 12px !important;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+::-webkit-scrollbar-track {
+    background: #F0F2F5 !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #B0B0B0 !important;
+    border-radius: 4px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #888 !important;
+}

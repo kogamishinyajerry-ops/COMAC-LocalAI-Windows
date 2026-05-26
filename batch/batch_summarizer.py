@@ -1,13 +1,13 @@
 from pathlib import Path
 from batch.batch_processor import BatchProcessor, BatchResult
 from parsers.parser_factory import ParserFactory
-from ollama_client import OllamaClient
+from ollama_client import OllamaClient, MODEL_DOC
 
 class BatchSummarizer:
     def __init__(self, max_workers: int = 4):
         self.processor = BatchProcessor(max_workers)
         self.parser = ParserFactory()
-        self.client = OllamaClient("qwen2.5")
+        self.client = OllamaClient(MODEL_DOC)
 
     def add_file(self, input_path: str, output_path: str = None):
         if output_path is None:

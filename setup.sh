@@ -27,7 +27,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-MODELS=("qwen-doc" "qwen3-fast" "deepseek-doc")
+MODELS=("qwen:7b-q4_K_M")
 EMBED_MODEL="nomic-embed-text"
 
 log() { echo -e "$1"; }

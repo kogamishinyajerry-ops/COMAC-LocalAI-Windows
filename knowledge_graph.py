@@ -314,18 +314,52 @@ class KnowledgeGraphExporter:
     """知识图谱导出器"""
 
     @staticmethod
+    def _escape_mermaid_text(text: str) -> str:
+        r"""
+        Mermaid 特殊字符转义
+
+        Mermaid 标签和文字中以下字符有特殊含义，必须转义：
+        - 引号 " ' → \" \'
+        - 方括号 [] → \[\]
+        - 管道符 | → \|
+        - 箭头 --> === → 转义
+        - 反斜杠 \ → \\
+        - 换行符 → \\n
+        """
+        if not text:
+            return ""
+        # 先转义反斜杠（其他转义的基础）
+        text = text.replace('\\', '\\\\')
+        # 转义引号
+        text = text.replace('"', '\\"')
+        text = text.replace("'", "\\'")
+        # 转义方括号（Mermaid 节点标签中）
+        text = text.replace('[', '\\[')
+        text = text.replace(']', '\\]')
+        # 转义管道符（关系标签中）
+        text = text.replace('|', '\\|')
+        # 换行符转义
+        text = text.replace('\n', '\\\\n')
+        # 去除控制字符
+        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+        return text
+
+    @staticmethod
     def to_mermaid(graph: KnowledgeGraph) -> str:
         """导出为Mermaid格式（用于Markdown渲染）"""
         lines = ["```mermaid", "graph TD"]
 
-        # 添加节点
+        # 添加节点（标签经过转义）
         for eid, entity in graph.entities.items():
-            label = f'"{entity.name}\\n({entity.entity_type})"'
+            escaped_name = KnowledgeGraphExporter._escape_mermaid_text(entity.name)
+            escaped_type = KnowledgeGraphExporter._escape_mermaid_text(entity.entity_type)
+            label = f'"{escaped_name}\\n({escaped_type})"'
             lines.append(f'    {eid}[{label}]')
 
-        # 添加边
+        # 添加边（关系类型转义）
         for rel in graph.relations:
-            lines.append(f'    {rel.source} -->|{rel.relation_type}| {rel.target}')
+            escaped_rel = KnowledgeGraphExporter._escape_mermaid_text(rel.relation_type)
+            lines.append(f'    {rel.source} -->|{escaped_rel}| {rel.target}')
 
         lines.append("```")
         return "\n".join(lines)
@@ -354,7 +388,7 @@ class KnowledgeGraphExporter:
                 }
             })
 
-        return json.dumps(elements, ensure_ascii=False)
+        return json.dumps(elements, ensure_ascii=False, indent=2)
 
 
 def quick_demo():

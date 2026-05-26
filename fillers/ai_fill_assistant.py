@@ -1,10 +1,11 @@
-from ollama_client import OllamaClient
+from ollama_client import OllamaClient, MODEL_DOC
 import re
 import json
 
 class AIFillAssistant:
     def __init__(self):
-        self.client = OllamaClient("qwen2.5")
+        # 使用统一配置常量，替代硬编码模型名
+        self.client = OllamaClient(MODEL_DOC)
 
     def extract_fill_data(self, source_text: str, template: str, placeholders: list) -> dict:
         prompt = f"""从以下文本中提取信息，填入模板。

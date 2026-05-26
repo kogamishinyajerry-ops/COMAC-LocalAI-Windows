@@ -6,6 +6,36 @@ import re
 import os
 import platform
 
+
+def _is_oom_error(e: Exception) -> bool:
+    """判断是否为显存/内存不足错误"""
+    msg = str(e).lower()
+    oom_keywords = [
+        'cuda', 'out of memory', 'oom', 'memory',
+        'failed to allocate', 'allocation failure',
+        'buffer for kv', 'kv cache',
+    ]
+    return any(k in msg for k in oom_keywords)
+
+
+def _human_readable_error(e: Exception, operation: str = "生成") -> str:
+    """将异常转换为用户友好的错误消息"""
+    if _is_oom_error(e):
+        return (
+            f"[资源不足] {operation}失败：显存/内存不足。"
+            "建议：关闭其他占用显存的程序，或减少并发请求。"
+        )
+    msg = str(e)
+    # 去掉冗长的路径和内部细节
+    if 'ConnectionError' in type(e).__name__ or 'connect' in msg.lower():
+        return f"[连接失败] 无法连接 Ollama 服务，请确认 Ollama 已启动。"
+    if 'timeout' in msg.lower():
+        return f"[超时] {operation}超时，请稍后重试。"
+    # 截断过长的错误信息
+    if len(msg) > 120:
+        msg = msg[:120] + "..."
+    return f"[错误] {operation}失败：{msg}"
+
 # 模型名称常量 - 从 config.py 集中管理
 from config import (
     MODEL_DOC, MODEL_EMBED,
@@ -76,22 +106,25 @@ class OllamaClient:
             "num_predict": num_predict,
         }
 
-        if system:
-            response = ollama.generate(
-                model=self.model,
-                prompt=prompt,
-                system=system,
-                options=options,
-                stream=stream
-            )
-        else:
-            response = ollama.generate(
-                model=self.model,
-                prompt=prompt,
-                options=options,
-                stream=stream
-            )
-        return response['response']
+        try:
+            if system:
+                response = ollama.generate(
+                    model=self.model,
+                    prompt=prompt,
+                    system=system,
+                    options=options,
+                    stream=stream
+                )
+            else:
+                response = ollama.generate(
+                    model=self.model,
+                    prompt=prompt,
+                    options=options,
+                    stream=stream
+                )
+            return response['response']
+        except Exception as e:
+            raise RuntimeError(_human_readable_error(e, "文本生成")) from e
 
     def chat(
         self,
@@ -112,20 +145,22 @@ class OllamaClient:
         """
         if temperature is None:
             temperature = 0.3
-                temperature = 0.3
 
         if system:
             full_messages = [{"role": "system", "content": system}] + messages
         else:
             full_messages = messages
 
-        response = ollama.chat(
-            model=self.model,
-            messages=full_messages,
-            options={"temperature": temperature},
-            stream=False
-        )
-        return response['message']['content']
+        try:
+            response = ollama.chat(
+                model=self.model,
+                messages=full_messages,
+                options={"temperature": temperature},
+                stream=False
+            )
+            return response['message']['content']
+        except Exception as e:
+            raise RuntimeError(_human_readable_error(e, "对话生成")) from e
 
     def embeddings(self, prompt: str) -> List[float]:
         """获取文本的embedding向量"""
@@ -139,10 +174,20 @@ class OllamaClient:
             print(f"[OllamaClient] Embedding failed: {e}")
             return []
 
+    def is_model_available(self) -> bool:
+        """检查当前模型是否在实际加载列表中"""
+        try:
+            available = self.list_models()
+            return self.model in available
+        except Exception:
+            return False
+
     def list_models(self) -> List[str]:
         try:
-            models = ollama.list()
-            return [m['name'] for m in models.get('models', [])]
+            response = ollama.list()
+            # ollama.list() returns ListResponse with .models attribute (not a plain dict)
+            model_list = getattr(response, 'models', []) or []
+            return [getattr(m, 'model', str(m)) for m in model_list]
         except Exception:
             return []
 
@@ -213,7 +258,7 @@ class PathValidator:
 
 
 class ModelRouter:
-    """单模型路由 — 所有任务统一使用 comac (7B)"""
+    """单模型路由 — 所有任务统一使用 qwen:7b-q4_K_M"""
 
     def __init__(self):
         self.client = OllamaClient(MODEL_DOC)

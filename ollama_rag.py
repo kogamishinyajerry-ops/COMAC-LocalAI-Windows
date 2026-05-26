@@ -191,10 +191,25 @@ class OllamaRAG:
 
         self._embed_client = OllamaClient(embed_model)
         self._llm_client = OllamaClient(llm_model)
+        self._embed_available = self._check_embed_model()
         self.vector_store = SimpleVectorStore()
 
+    def _check_embed_model(self) -> bool:
+        """检测 embedding 模型是否可用，不可用则用主模型替代"""
+        try:
+            models = self._embed_client.list_models()
+            if self.embed_model in models:
+                return True
+            # embedding 模型不可用，尝试用主模型
+            print(f"[RAG] Embedding model '{self.embed_model}' not available, "
+                  f"will use main model '{self.llm_model}' for embeddings.")
+            self._embed_client = OllamaClient(self.llm_model)
+            return False
+        except Exception:
+            return False
+
     def _get_embedding(self, text: str) -> List[float]:
-        """获取文本的embedding"""
+        """获取文本的embedding（自动降级）"""
         try:
             response = self._embed_client.embeddings(text)
             # Ollama embeddings API返回 {'embedding': [...]}
@@ -318,8 +333,22 @@ class OllamaRAG:
                 files = dir_path.glob(pattern)
 
             for file_path in files:
-                # 跳过隐藏文件和AI-Processed目录
-                if '/.' in str(file_path) or 'AI-Processed' in str(file_path):
+                # 跳过隐藏文件和敏感目录（跨平台路径安全检查）
+                file_path_str = str(file_path)
+                # 同时检查 Unix 风格和 Windows 风格的路径遍历特征
+                if ('/.' in file_path_str or '\\..\\' in file_path_str
+                        or '\\.' in file_path_str or '..' in Path(file_path).parts
+                        or 'AI-Processed' in file_path_str
+                        or file_path_str.startswith('.')):
+                    continue
+                # 额外验证：解析真实路径，确保不在敏感区域内
+                try:
+                    resolved = file_path.resolve()
+                    forbidden = ['Windows', 'System32', 'Program Files', 'ProgramData',
+                                '.config', '.ssh', '.aws']
+                    if any(f in resolved.parts for f in forbidden):
+                        continue
+                except Exception:
                     continue
                 total_chunks += self.index_file(str(file_path))
 
@@ -402,7 +431,19 @@ class OllamaRAG:
                 files = dir_path.glob(pattern)
 
             for file_path in files:
-                if '/.' in str(file_path) or 'AI-Processed' in str(file_path):
+                file_path_str = str(file_path)
+                if ('/.' in file_path_str or '\\..\\' in file_path_str
+                        or '\\.' in file_path_str or '..' in Path(file_path).parts
+                        or 'AI-Processed' in file_path_str
+                        or file_path_str.startswith('.')):
+                    continue
+                try:
+                    resolved = file_path.resolve()
+                    forbidden = ['Windows', 'System32', 'Program Files', 'ProgramData',
+                                '.config', '.ssh', '.aws']
+                    if any(f in resolved.parts for f in forbidden):
+                        continue
+                except Exception:
                     continue
                 current_files.add(str(file_path))
 

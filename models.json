@@ -10,8 +10,8 @@
       },
       "models": [
         {
-          "id": "comac",
-          "name": "comac (7B Q4_K_M)",
+          "id": "qwen:7b-q4_K_M",
+          "name": "qwen:7b-q4_K_M (Qwen2.5-7B Q4_K_M)",
           "reasoning": false,
           "input": ["text"],
           "contextWindow": 8192,

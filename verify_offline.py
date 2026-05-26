@@ -45,7 +45,7 @@ def check_models():
         from ollama_client import OllamaClient, MODEL_DOC
 
         # 测试单一 7B 模型
-        for model, name in [(MODEL_DOC, "comac")]:
+        for model, name in [(MODEL_DOC, MODEL_DOC)]:
             try:
                 client = OllamaClient(model)
                 result = client.generate("你好", num_predict=50)
