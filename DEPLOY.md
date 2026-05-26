@@ -1,8 +1,15 @@
 # COMAC 离轴线AI文档处理平台 — 内网一键部署指南
 
-## 部署前准备（两件事必须手动完成）
+## 部署前准备
 
-### 1. 安装 Ollama（本项目唯一外部依赖）
+### 硬件需求
+- CPU: 支持 AVX2 指令集（Ollama 运行要求）
+- 内存: 16GB+（qwen:7b-q4_K_M 加载需要约 6GB）
+- 磁盘: 10GB+ 可用空间（含模型约 5GB）
+
+---
+
+### 1. 安装 Ollama（本项目必须依赖）
 
 Ollama 无法打包进项目，必须单独安装：
 
@@ -10,26 +17,51 @@ Ollama 无法打包进项目，必须单独安装：
 ```
 https://ollama.com/download/windows
 ```
-下载后双击安装，无需其他配置。
 
 **空气隔离内网机器：**
 将安装包通过 U盘复制到内网机器，双击安装。
 
 ---
 
-### 2. 准备 python-wheels 离线包（如需内网离线部署）
+### 2. 安装 Python 3.11（本项目必须依赖）
+
+Python 3.11 用于创建虚拟环境（.venv），Ollama 模型运行不依赖 Python。
+
+**方式 A（推荐）— Python.org 安装程序：**
+1. 下载 `python-3.11.8-amd64.exe`（约 25MB）
+   ```
+   https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
+   ```
+2. 将安装程序放入本项目 `tools\` 目录，重命名为 `python-3.11.8-amd64.exe`
+3. setup.bat 会自动检测并使用
+
+**方式 B — Microsoft Store（需联网安装）：**
+在 PowerShell 中运行：
+```
+winget install Python.Python.3.11
+```
+
+**方式 C — 已安装 Python 3.11：**
+如果系统已有 Python 3.11（python.org 或 Microsoft Store），setup.bat 会自动检测使用，无需额外操作。
+
+> ⚠️ **Python Embeddable 不支持创建 venv**：如果内网机器只有 Python Embeddable，setup.bat 会提示错误，此时需要安装完整版 Python 3.11。
+
+---
+
+### 3. 准备 python-wheels 离线包（内网离线部署必须）
 
 在**有网的 Windows 机器**上：
 
 ```
 1. 将项目文件夹复制到有网机器
-2. 双击运行 download-wheels.bat
-3. 等待下载完成（python-wheels\ 目录会出现许多 .whl 文件）
-4. 将整个 python-wheels\ 目录一起打包进项目文件夹
-5. 传到内网机器
+2. 确认 Python 3.11 已安装（方式 A/B/C 任选）
+3. 双击运行 download-wheels.bat（约 5-10 分钟）
+4. 等待 python-wheels\ 目录生成约 200+ 个 .whl 文件
+5. 将 python-wheels\ 目录一起打包进项目文件夹
+6. 传到内网机器
 ```
 
-> **重要**：每次修改 `requirements.txt` 后，必须重新运行 `download-wheels.bat` 更新离线包。
+> **重要**：download-wheels.bat 必须与目标机器的 Python 版本一致（均为 3.11），否则依赖安装会失败。
 
 ---
 
@@ -38,16 +70,28 @@ https://ollama.com/download/windows
 ### 有网机器（在线模式）
 
 ```
-1. 双击 setup.bat         → 初始化（自动下载模型+依赖）
-2. 双击 start.bat        → 启动服务
-3. 浏览器打开 http://localhost:7860
-4. 任意 PowerShell 输入 opencode  → TUI 对话
+1. 安装 Ollama（下载 ollama-windows-amd64.zip 安装）
+2. 安装 Python 3.11（方式 A/B/C 任选）
+3. 双击 setup.bat  → 初始化
+4. 双击 start.bat  → 启动服务
+5. 浏览器打开 http://localhost:7860
 ```
 
 ### 空气隔离内网（离线模式）
 
 ```
-前提：python-wheels\ 已预装 + GGUF 模型已放入 ollama-models\
+前提条件：
+  - Ollama 已安装
+  - Python 3.11 已安装（或 python-3.11.8-amd64.exe 放入 tools\）
+  - python-wheels\ 已预装（约数百 MB）
+  - qwen2.5 GGUF 模型文件已放入 ollama-models\（约 4.5GB）
+
+部署步骤：
+1. 双击 setup.bat  → 初始化（全程离线）
+2. 双击 start.bat  → 启动服务
+3. 浏览器打开 http://localhost:7860
+```
+
 1. 双击 setup.bat         → 初始化（使用本地 wheel 包，无需网络）
 2. 双击 start.bat        → 启动服务
 3. 浏览器打开 http://localhost:7860

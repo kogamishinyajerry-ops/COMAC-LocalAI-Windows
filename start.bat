@@ -57,11 +57,13 @@ if exist "%OLLAMA_BIN%" (
 curl -s --connect-timeout 3 "http://%OLLAMA_HOST%/api/version" >nul 2>&1
 if not errorlevel 1 goto :ollama_ok
 
+if not exist "%SCRIPT_DIR%logs" mkdir "%SCRIPT_DIR%logs" 2>nul
+
 echo         Ollama 未运行，正在启动...
 if exist "%OLLAMA_BIN%" (
-    start /B "%OLLAMA_BIN%" serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
+    start /B "" "%OLLAMA_BIN%" serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
 ) else (
-    start /B ollama serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
+    start /B "" ollama serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
 )
 
 REM 等待 Ollama 启动（最多 30 秒）

@@ -103,22 +103,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 将 Ollama 模型导出为 GGUF 文件到 ollama-models\
 echo.
-echo   模型拉取成功，正在导出 GGUF 文件到 ollama-models\ ...
-if not exist "ollama-models" mkdir "ollama-models"
-
-REM Ollama 的模型文件在用户目录，需要复制出来
-set "OLLAMA_MODEL_DIR=%USERPROFILE%\.ollama\models\blobs\"
-if exist "%OLLAMA_MODEL_DIR%" (
-    for /F "delims=" %%f in ('dir /B /O-D "%OLLAMA_MODEL_DIR%qwen2.5*" 2^>nul') do (
-        if not exist "ollama-models\%%f" (
-            echo   复制模型文件: %%f
-            copy "%OLLAMA_MODEL_DIR%%%f" "ollama-models\" >nul 2>&1
-        )
-    )
-)
-
+echo   模型已下载到 Ollama 缓存，setup.bat 会自动检测到
+echo   无需手动复制文件
 echo.
 echo ==============================================================
 echo   下载完成！
