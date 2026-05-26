@@ -1,0 +1,48 @@
+/* Custom styles for COMAC AI Document Processing Platform */
+
+:root {
+    --primary-color: #0066cc;
+    --secondary-color: #f5f5f5;
+    --border-radius: 8px;
+}
+
+.gradio-container {
+    max-width: 1200px !important;
+    margin: auto !important;
+}
+
+/* Tab styling */
+.tab-nav {
+    background-color: var(--secondary-color);
+}
+
+/* Button hover effects */
+.primary-btn:hover {
+    background-color: #0052a3 !important;
+}
+
+/* Output text area */
+.output-box {
+    background-color: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--border-radius);
+}
+
+/* Status indicators */
+.status-success {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-error {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Footer styling */
+.footer {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-size: 12px;
+}

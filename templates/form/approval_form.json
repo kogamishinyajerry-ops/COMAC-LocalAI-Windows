@@ -1,0 +1,10 @@
+{
+  "title": "Leave Application",
+  "applicant": "Zhang San",
+  "department": "Engineering",
+  "date": "2024-05-20",
+  "details": "Annual leave from 2024-05-25 to 2024-05-30",
+  "manager": "Li Si",
+  "hr": "Wang Wu",
+  "remarks": "None"
+}
