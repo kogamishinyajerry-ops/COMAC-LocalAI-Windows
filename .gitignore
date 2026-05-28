@@ -1,116 +1,57 @@
-# =============================================================================
 # COMAC-LocalAI-Windows .gitignore
-# 打包部署时：排除以下内容，仅保留源代码、模板、文档
-# =============================================================================
+# Exclude runtime artifacts, secrets, and build products.
+# Deployment packages (COMAC-*.zip) are explicitly committed.
 
-# -----------------------------------------------------------------------------
-# Python 运行时产物（必须排除）
-# -----------------------------------------------------------------------------
-.venv/                    # Python 虚拟环境（独立打包，内含 ~1.5GB 二进制包）
-venv/                    # 备选 venv 名称
-env/                     # 备选 env 名称
-__pycache__/            # Python 字节码缓存
-*.py[cod]               # 编译的 Python 字节码
+# Python virtual environment
+.venv/
+venv/
+env/
+.py311/
+.py311_venv/
+.py311full/
+.build_venv/
+
+# Python bytecode
+__pycache__/
 *.pyc
 *.pyo
-*.pyd
 
-# -----------------------------------------------------------------------------
-# 本地运行时文件（必须排除）
-# -----------------------------------------------------------------------------
-temp/                    # 运行时上传/输出目录（每次启动为空）
-logs/                    # 日志文件
-*.log                    # 所有日志文件
-task_history.db         # SQLite 任务历史数据库
-*.db                    # 所有数据库文件
+# Runtime temp/logs
+temp/
+logs/
+*.log
 
-# -----------------------------------------------------------------------------
-# Ollama 模型文件（巨大文件，不纳入版本控制）
-# -----------------------------------------------------------------------------
-ollama-models/*.gguf    # 模型权重文件（用户需自行下载到内网机器）
-ollama-models/*.bin
-ollama-models/*.fp16
-*.gguf                  # 任何位置的 GGUF 模型文件
+# Personal secrets
+.env
 
-# -----------------------------------------------------------------------------
-# 内置运行时工具（由 setup.bat 提取，不纳入版本控制）
-# 注意: tools/ollama-windows-amd64.zip (~2GB) 和
-#       tools/python-3.11.8-amd64.exe (~25MB) 需手动放入项目目录
-# -----------------------------------------------------------------------------
-tools/ollama/           # Ollama 便携运行时（从 zip 提取）
-tools/ollama-windows-amd64.zip  # Ollama 安装包（过大，不提交 git，手动下载）
-tools/python/           # Python Embeddable（从 zip 提取）
-ollama-models/*.bin
-ollama-models/*.fp16
-*.gguf                  # 任何位置的 GGUF 模型文件
+# Ollama runtime cache
+ollama-cache/
+vector_index/
 
-# -----------------------------------------------------------------------------
-# 系统文件
-# -----------------------------------------------------------------------------
-.DS_Store              # macOS
-Thumbs.db              # Windows
-desktop.ini            # Windows
-*.swp                  # Vim 临时文件
-*.swo
-*~                     # Emacs 临时文件
+# Large extracted runtimes
+tools/ollama/
+tools/python/
+tools/ollama-windows-amd64.zip
+tools/python-embed.zip
 
-# -----------------------------------------------------------------------------
-# IDE 和编辑器
-# -----------------------------------------------------------------------------
-.vscode/
-.idea/
-*.sublime-*
-*.code-workspace
+# Wheels cache (covered by COMAC-python-wheels.zip)
+python-wheels/
+python-wheels-new/
 
-# -----------------------------------------------------------------------------
-# 测试覆盖产物
-# -----------------------------------------------------------------------------
-htmlcov/
-.coverage
-.pytest_cache/
-.tox/
-.mypy_cache/
-
-# -----------------------------------------------------------------------------
-# 部署产物（运行时生成）
-# -----------------------------------------------------------------------------
-dist/
+# Build artifacts
 build/
-offline_bundle/          # 离线部署包（由 build-offline-package.bat 生成）
-.build_venv/             # 临时构建 venv（由 build-offline-package.bat 动态创建）
-requirements.lock.txt    # 锁定依赖清单（由 build-offline-package.bat 动态生成）
-*.egg-info/
-*.whl                    # wheel 包
+dist/
+installer/
+*.db
 
-# -----------------------------------------------------------------------------
-# pip 离线包（可由 download-wheels.bat 重新下载）
-# -----------------------------------------------------------------------------
-python-wheels/          # 依赖包缓存（运行 download-wheels.bat 重新生成）
-tools/pip-wheels/*.whl  # pip 自身 wheel（重新下载即可）
+# Transfer zips (only COMAC-*.zip are committed)
+*.zip
+!COMAC-offline-sources.zip
+!COMAC-python-wheels.zip
 
-# -----------------------------------------------------------------------------
-# 部署传输包（大部分不纳入版本控制）
-# -----------------------------------------------------------------------------
-*.zip                              # 所有 zip 包（默认排除）
-!COMAC-offline-sources.zip         # 离线部署源码包（保留在仓库）
-!COMAC-python-wheels.zip           # Python 离线依赖包（保留在仓库）
-installer/                         # NSIS 安装程序构建产物
-python-wheels-new/                 # wheels 测试目录
-ollama-cache/                      # Ollama 本地模型缓存
-vector_index/                      # RAG 向量索引缓存
-.py311/                            # Python 3.11 embeddable
-.py311_venv/                       # Python 3.11 虚拟环境
-.py311full/                        # Python 3.11 完整安装
-_fix_curl.py                       # 一次性修复脚本
-get-pip.py                         # pip 引导脚本
-*.gguf                             # 测试 GGUF 文件
-merge_gguf.zip                     # 合并脚本传输包
-hf_xet-only.zip                    # 单文件传输包
-COMAC-source-package.zip           # 构建产物
-
-# -----------------------------------------------------------------------------
-# 安全文件（不纳入版本控制）
-# -----------------------------------------------------------------------------
-.env                    # 环境变量文件（含密码/密钥）
-*.pem                   # 证书文件
-*.key                   # 密钥文件
+# System junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.bak
