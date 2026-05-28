@@ -20,7 +20,7 @@ MODEL_DOC = MODEL_COMAC
 # =============================================================================
 # Ollama 性能参数 (低配优化)
 # =============================================================================
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost:11434")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "127.0.0.1:11435")
 OLLAMA_NUM_PARALLEL = 1       # 单线程推理 (CPU 瓶颈)
 OLLAMA_MAX_LOADED_MODELS = 1  # 只加载一个模型
 OLLAMA_KEEP_ALIVE = "5m"      # 5分钟无请求后卸载

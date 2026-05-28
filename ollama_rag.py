@@ -24,6 +24,8 @@ except ImportError:
     NUMPY_AVAILABLE = False
 
 from ollama_client import OllamaClient, MODEL_DOC
+from parsers.parser_factory import ParserFactory
+from parsers.parser_factory import ParserFactory
 
 
 @dataclass
@@ -260,6 +262,20 @@ class OllamaRAG:
                 except Exception as e:
                     print(f"[RAG] PDF reading not available for {file_path}: {e}")
                     return 0
+            elif path.suffix in ['.docx', '.pptx', '.xlsx', '.csv']:
+                try:
+                    doc = ParserFactory.parse(str(path))
+                    content = doc.content
+                except Exception as e:
+                    print(f"[RAG] Failed to parse {file_path}: {e}")
+                    return 0
+            elif path.suffix in ['.docx', '.pptx', '.xlsx', '.csv']:
+                try:
+                    doc = ParserFactory.parse(str(path))
+                    content = doc.content
+                except Exception as e:
+                    print(f"[RAG] Failed to parse {file_path}: {e}")
+                    return 0
             else:
                 try:
                     content = path.read_text(encoding='utf-8')
@@ -327,7 +343,7 @@ class OllamaRAG:
             return self.index_file(str(dir_path))
 
         # 遍历目录
-        patterns = ['*.md', '*.txt', '*.pdf']
+        patterns = ['*.md', '*.txt', '*.pdf', '*.docx', '*.pptx', '*.xlsx', '*.csv']
         for pattern in patterns:
             if recursive:
                 files = dir_path.rglob(pattern)
@@ -423,7 +439,7 @@ class OllamaRAG:
         indexed_files = set(self.vector_store.documents.keys())
 
         # 遍历目录
-        patterns = ['*.md', '*.txt', '*.pdf']
+        patterns = ['*.md', '*.txt', '*.pdf', '*.docx', '*.pptx', '*.xlsx', '*.csv']
         current_files = set()
 
         for pattern in patterns:

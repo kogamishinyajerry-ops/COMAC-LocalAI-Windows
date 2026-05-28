@@ -1,38 +1,41 @@
 @echo off
-chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 REM ============================================================================
-REM  COMAC-LocalAI-Windows 启动脚本（内网一键部署版）
-REM  模型: qwen:7b-q4_K_M
-REM  环境: Windows 10 x64, 16GB RAM, 空气隔离内网
+REM  COMAC-LocalAI-Windows - Startup Script
+REM  Model: qwen:7b-q4_K_M
+REM  Environment: Windows 10 x64, 16GB RAM, air-gapped
 REM ============================================================================
 
-title COMAC AI - 智能文档处理平台
+title COMAC AI - Document Processing Platform
 
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
 echo.
 echo ==============================================================
-echo    COMAC 离轴线AI文档处理平台
-echo    Windows 内网一键部署版
+echo    COMAC Local AI Document Processing Platform
+echo    Windows Offline Deployment
 echo ==============================================================
 echo.
 
 REM ============================================================================
-REM  0. 检查 .venv 和目录
+REM  0. Check .venv and directories
 REM ============================================================================
-echo [0/4] 检查运行环境...
+echo [0/4] Checking runtime environment...
 
 if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
-    echo   [错误] .venv 不存在
-    echo   请先在有网机器运行 pre-deploy.bat
-    echo   或将完整项目目录从有网机器复制过来
+    echo   [ERROR] .venv not found - project not initialized
+    echo.
+    if exist "%SCRIPT_DIR%install-offline.bat" (
+        echo   Please run install-offline.bat first to complete setup.
+    ) else (
+        echo   Please run pre-deploy.bat on an internet-connected machine first.
+    )
     pause
     exit /b 1
 )
-echo         [OK] .venv 存在
+echo         [OK] .venv exists
 
 for %%D in (
     "temp\uploads"
@@ -43,76 +46,75 @@ for %%D in (
 ) do (
     if not exist "%%~D" mkdir "%%~D" 2>nul
 )
-echo         [OK] 目录就绪
+echo         [OK] Directories ready
 echo.
 
 REM ============================================================================
-REM  1. 启动 Ollama 服务
+REM  1. Start Ollama service
 REM ============================================================================
-echo [1/4] 检查 Ollama 服务...
+echo [1/4] Checking Ollama service...
 
-set "OLLAMA_HOST=localhost:11434"
+set "OLLAMA_HOST=127.0.0.1:11435"
 set "OLLAMA_MODELS=%SCRIPT_DIR%ollama-cache"
 set "OLLAMA_BIN=tools\ollama\ollama.exe"
 
-REM 优先使用内置 Ollama，否则尝试系统 PATH
+REM Prefer built-in Ollama, fall back to system PATH
 if exist "%OLLAMA_BIN%" (
     set "OLLAMA_CMD=%OLLAMA_BIN%"
 ) else (
     set "OLLAMA_CMD=ollama"
 )
 
-curl -s --connect-timeout 3 "http://%OLLAMA_HOST%/api/version" >nul 2>&1
+powershell -NoProfile -Command "try{$r=iwr "http://%OLLAMA_HOST%/api/version" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
 if not errorlevel 1 goto :ollama_ok
 
 if not exist "%SCRIPT_DIR%logs" mkdir "%SCRIPT_DIR%logs" 2>nul
 
-echo         Ollama 未运行，正在启动...
+echo         Ollama not running, starting...
 if exist "%OLLAMA_BIN%" (
     start /B "" "%OLLAMA_BIN%" serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
 ) else (
     start /B "" ollama serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
 )
 
-REM 等待 Ollama 启动（最多 30 秒）
+REM Wait for Ollama (up to 30 seconds)
 for /L %%i in (1,1,15) do (
     timeout /t 2 /nobreak >nul
-    curl -s --connect-timeout 3 "http://%OLLAMA_HOST%/api/version" >nul 2>&1
+    powershell -NoProfile -Command "try{$r=iwr "http://%OLLAMA_HOST%/api/version" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
     if not errorlevel 1 goto :ollama_ok
 )
 
 echo.
-echo   [错误] Ollama 启动失败
-echo   请运行 setup.bat 重新初始化
-echo   日志: logs\ollama.log
+echo   [ERROR] Ollama startup failed
+echo   Please run setup.bat to reinitialize
+echo   Log: logs\ollama.log
 pause
 exit /b 1
 
 :ollama_ok
-echo         [OK] Ollama 服务运行中
+echo         [OK] Ollama service running
 echo.
 
 REM ============================================================================
-REM  2. 验证 qwen:7b-q4_K_M 模型
+REM  2. Verify qwen:7b-q4_K_M model
 REM ============================================================================
-echo [2/4] 验证模型 (qwen:7b-q4_K_M)...
+echo [2/4] Verifying model (qwen:7b-q4_K_M^)...
 
-REM 尝试匹配 qwen 相关模型
 %OLLAMA_CMD% list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul
 if errorlevel 1 (
     echo.
-    echo   [错误] qwen 模型未找到
-    echo   请先运行 setup.bat 初始化模型
+    echo   [ERROR] qwen model not found
+    echo   Please run setup.bat to initialize the model
     pause
     exit /b 1
 )
-echo         [OK] qwen 模型就绪
+echo         [OK] qwen model ready
 echo.
 
 REM ============================================================================
-REM  3. 检查 Gradio 认证（从 .env 读取）
+REM  3. Check Gradio auth (read from .env)
 REM ============================================================================
-echo [3/4] 检查访问认证...
+echo [3/4] Checking access authentication...
 
 if exist ".env" (
     for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env") do (
@@ -121,72 +123,72 @@ if exist ".env" (
 )
 
 if defined GRADIO_USER if defined GRADIO_PASS (
-    echo         [OK] 认证已配置 (用户: %GRADIO_USER%)
+    echo         [OK] Auth configured (user: %GRADIO_USER%^)
     if "%GRADIO_PASS%"=="change_me_123" (
-        echo         [警告] 密码仍为默认值，请修改 .env 中的 GRADIO_PASS
+        echo         [WARN] Password is still the default, edit .env to change GRADIO_PASS
     )
 ) else (
-    echo         [警告] 未找到认证信息
-    echo         请在 .env 中设置 GRADIO_USER 和 GRADIO_PASS
+    echo         [WARN] Auth not configured
+    echo         Set GRADIO_USER and GRADIO_PASS in .env
 )
 echo.
 
 REM ============================================================================
-REM  4. 启动 Gradio Web UI
+REM  4. Start Gradio Web UI
 REM ============================================================================
-echo [4/4] 启动 Gradio UI...
+echo [4/4] Starting Gradio UI...
 
-REM 设置 Ollama 优化环境变量
+REM Set Ollama optimization env vars
 set "OLLAMA_NUM_PARALLEL=1"
 set "OLLAMA_MAX_LOADED_MODELS=1"
 set "OLLAMA_KEEP_ALIVE=5m"
 
-REM 清理 7860 端口旧进程（仅终止 Python 进程，避免误杀）
+REM Clean up port 7860 (only kill Python processes)
 set "PORT_PID="
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":7860.*LISTENING"') do (
     set "PORT_PID=%%a"
 )
 if defined PORT_PID (
     for /f "tokens=1" %%n in ('tasklist /FI "PID eq !PORT_PID!" /FO CSV /NH 2^>nul ^| findstr /I "python"') do (
-        echo         端口 7860 被 Python 进程（PID=!PORT_PID!）占用，正在终止...
+        echo         Port 7860 occupied by Python process (PID=!PORT_PID!^), terminating...
         taskkill /PID !PORT_PID! /F >nul 2>&1
         timeout /t 1 /nobreak >nul
     )
 )
 
-REM 启动应用
-echo         启动中（首次运行可能需要 10-20 秒）...
+REM Launch app
+echo         Starting (first run may take 10-20 seconds^)...
 start "COMAC AI" .venv\Scripts\python.exe app.py
 
-REM 等待 Gradio 启动
+REM Wait for Gradio
 for /L %%i in (1,1,20) do (
     timeout /t 2 /nobreak >nul
-    curl -s --connect-timeout 3 "http://localhost:7860" >nul 2>&1
+    powershell -NoProfile -Command "try{$r=iwr "http://localhost:7860" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
     if not errorlevel 1 goto :gradio_ok
 )
 
 echo.
-echo         Gradio 启动较慢，请稍后访问: http://localhost:7860
+echo         Gradio is starting slowly, please wait and visit: http://localhost:7860
 goto :launch_done
 
 :gradio_ok
-echo         [OK] Gradio 已就绪
+echo         [OK] Gradio ready
 start http://localhost:7860
 
 :launch_done
 echo.
 echo ==============================================================
-echo    部署成功！
+echo     Deployment successful!
 echo.
-echo    访问地址: http://localhost:7860
-if defined GRADIO_USER echo    登录用户: %GRADIO_USER%
+echo     Visit: http://localhost:7860
+if defined GRADIO_USER echo     Login: %GRADIO_USER%
 echo.
-echo    停止服务: 关闭此窗口或任务管理器结束 python.exe
+echo     To stop: close this window or end python.exe in Task Manager
 echo ==============================================================
 echo.
 
 REM --------------------------------------------------------------------------
-REM 自动注册 opencode 到用户 PATH（静默，仅首次注册）
+REM Auto-register opencode in user PATH (silent, first-time only)
 REM --------------------------------------------------------------------------
 powershell -NoProfile -Command ^
     "$p = [Environment]::GetEnvironmentVariable('Path', 'User'); " ^
@@ -194,13 +196,12 @@ powershell -NoProfile -Command ^
     "    [Environment]::SetEnvironmentVariable('Path', ($p.TrimEnd(';') + ';%~dp0;'), 'User'); " ^
     "    Write-Host ''; " ^
     "    Write-Host '---'; " ^
-    "    Write-Host '附: 终端 AI 对话已就绪'; " ^
+    "    Write-Host 'Terminal AI chat is ready'; " ^
     "    Write-Host ''; " ^
-    "    Write-Host '  从现在起，在任意目录打开 PowerShell'; " ^
-    "    Write-Host '  直接输入 opencode 即可启动 AI 对话'; " ^
+    "    Write-Host '  Type opencode in any PowerShell to start AI chat'; " ^
     "    Write-Host ''; " ^
-    "    Write-Host '  如果当前已打开 PowerShell，'; " ^
-    "    Write-Host '  请关闭后重新打开即可生效'; " ^
+    "    Write-Host '  If PowerShell is already open,'; " ^
+    "    Write-Host '  close and reopen it for the command to take effect'; " ^
     "    Write-Host '---'; " ^
     "    Write-Host '' } " >nul
 

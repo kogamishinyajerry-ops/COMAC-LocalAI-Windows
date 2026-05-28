@@ -97,7 +97,7 @@ result = client.generate(
 ollama list | grep -E "qwen-doc|qwen3-fast|deepseek-doc"
 
 # 验证 Ollama 服务
-curl localhost:11434/api/version
+curl 127.0.0.1:11435/api/version
 
 # 验证 OCR 工具
 ~/ollama-doc-models/ocrtext --help 2>/dev/null || echo "OCR OK"
@@ -138,7 +138,7 @@ curl localhost:11434/api/version
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Ollama (local)",
-      "options": { "baseURL": "http://localhost:11434/v1" },
+      "options": { "baseURL": "http://127.0.0.1:11435/v1" },
       "models": {
         "qwen-doc": { "name": "qwen-doc (文档主力)" },
         "qwen3-fast": { "name": "qwen3-fast (快速)" },

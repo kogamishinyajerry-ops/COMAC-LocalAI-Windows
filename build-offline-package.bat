@@ -3,9 +3,9 @@ chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 REM =============================================================================
-REM COMAC-LocalAI-Windows — 离线包构建脚本
-REM 在有网机器上运行，生成 offline_bundle/ 完整离线包
-REM 使用方法：双击 build-offline-package.bat 或在 CMD 中运行
+REM COMAC-LocalAI-Windows ?? ????????????
+REM ???????????????��????? offline_bundle/ ?????????
+REM ??��???????? build-offline-package.bat ???? CMD ??????
 REM =============================================================================
 
 set "SCRIPT_DIR=%~dp0"
@@ -14,20 +14,20 @@ set "BUNDLE_DIR=%SCRIPT_DIR%\offline_bundle"
 
 echo.
 echo ============================================================
-echo   COMAC-LocalAI-Windows — 离线包构建脚本
-echo   目标目录: %BUNDLE_DIR%
+echo   COMAC-LocalAI-Windows ?? ????????????
+echo   ?????: %BUNDLE_DIR%
 echo ============================================================
 echo.
 
 REM =============================================================================
-REM 步骤 1：检查 Python 3.11+
+REM ???? 1????? Python 3.11+
 REM =============================================================================
-echo [检查] 正在检查 Python 3.11+ ...
+echo [???] ?????? Python 3.11+ ...
 
 where python >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 未找到 Python。请安装 Python 3.11+
-    echo        下载链接：https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
+    echo [????] ��??? Python????? Python 3.11+
+    echo        ?????????https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
     pause
     exit /b 1
 )
@@ -37,64 +37,64 @@ for /f "tokens=1 delims=." %%D in ("!PY_VERSION!") do set "PY_MAJOR=%%D"
 for /f "tokens=2 delims=." %%D in ("!PY_VERSION!") do set "PY_MINOR=%%D"
 
 if !PY_MAJOR! lss 3 (
-    echo [错误] Python 版本过低: !PY_VERSION!，需要 Python 3.11+
-    echo        当前主版本: !PY_MAJOR!，需要 3.x
+    echo [????] Python ?��????: !PY_VERSION!????? Python 3.11+
+    echo        ??????��: !PY_MAJOR!????? 3.x
     pause
     exit /b 1
 )
 if !PY_MAJOR! equ 3 if !PY_MINOR! lss 11 (
-    echo [错误] Python 版本过低: !PY_VERSION!，需要 Python 3.11+
-    echo        当前: 3.!PY_MINOR!，需要 ≥ 3.11
+    echo [????] Python ?��????: !PY_VERSION!????? Python 3.11+
+    echo        ???: 3.!PY_MINOR!????? ?? 3.11
     pause
     exit /b 1
 )
 
-echo [OK]   Python !PY_VERSION! 已就绪
+echo [OK]   Python !PY_VERSION! ?????
 
 REM =============================================================================
-REM 步骤 2：检查 Ollama 安装包
+REM ???? 2????? Ollama ?????
 REM =============================================================================
-echo [检查] 正在检查 tools\ollama-windows-amd64.zip ...
+echo [???] ?????? tools\ollama-windows-amd64.zip ...
 
 if not exist "%SCRIPT_DIR%\tools\ollama-windows-amd64.zip" (
-    echo [错误] 未找到 tools\ollama-windows-amd64.zip
-    echo        请先从 https://ollama.com/download/windows 下载
-    echo        将下载的 OllamaSetup.exe 重命名或直接放置
-    echo        ollama-windows-amd64.zip 到 tools\ 目录
+    echo [????] ��??? tools\ollama-windows-amd64.zip
+    echo        ????? https://ollama.com/download/windows ????
+    echo        ??????? OllamaSetup.exe ??????????????
+    echo        ollama-windows-amd64.zip ?? tools\ ??
     pause
     exit /b 1
 )
 
-echo [OK]   tools\ollama-windows-amd64.zip 已就绪
+echo [OK]   tools\ollama-windows-amd64.zip ?????
 
 REM =============================================================================
-REM 步骤 3：检查 Python 安装程序
+REM ???? 3????? Python ???????
 REM =============================================================================
-echo [检查] 正在检查 tools\python-3.11.8-amd64.exe ...
+echo [???] ?????? tools\python-3.11.8-amd64.exe ...
 
 if not exist "%SCRIPT_DIR%\tools\python-3.11.8-amd64.exe" (
-    echo [提示] 未找到 tools\python-3.11.8-amd64.exe
-    echo        这是内网机器上安装 Python 3.11.8 所需的离线安装包
+    echo [???] ��??? tools\python-3.11.8-amd64.exe
+    echo        ???????????????? Python 3.11.8 ?????????????
     echo.
-    echo        请从以下地址下载并放置到 tools\ 目录：
+    echo        ??????��???????????? tools\ ????
     echo        https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
     echo.
-    echo        按任意键继续（将跳过 Python 安装包复制）...
+    echo        ??????????????????? Python ??????????...
     pause >nul
     set "PYTHON_INSTALLER_MISSING=1"
 ) else (
-    echo [OK]   tools\python-3.11.8-amd64.exe 已就绪
+    echo [OK]   tools\python-3.11.8-amd64.exe ?????
     set "PYTHON_INSTALLER_MISSING=0"
 )
 
 REM =============================================================================
-REM 步骤 4：检查 Ollama 模型文件
+REM ???? 4????? Ollama ??????
 REM =============================================================================
-echo [检查] 正在检查 ollama-models\ 目录 ...
+echo [???] ?????? ollama-models\ ?? ...
 
 if not exist "%SCRIPT_DIR%\ollama-models\Modelfile" (
-    echo [错误] 未找到 ollama-models\Modelfile
-    echo        请确保 ollama-models\ 目录下有 Modelfile
+    echo [????] ��??? ollama-models\Modelfile
+    echo        ????? ollama-models\ ?????? Modelfile
     pause
     exit /b 1
 )
@@ -103,25 +103,25 @@ set "GGUF_COUNT=0"
 for %%D in ("%SCRIPT_DIR%\ollama-models\*.gguf") do set /a GGUF_COUNT+=1
 
 if !GGUF_COUNT! equ 0 (
-    echo [提示] ollama-models\ 下未找到 .gguf 模型文件
-    echo        模型权重文件需要手动下载并放入 ollama-models\ 目录
+    echo [???] ollama-models\ ??��??? .gguf ??????
+    echo        ???????????????????????? ollama-models\ ??
     echo.
-    echo        按任意键继续（将只复制 Modelfile）...
+    echo        ???????????????????? Modelfile??...
     pause >nul
 ) else (
-    echo [OK]   找到 !GGUF_COUNT! 个 .gguf 模型文件
+    echo [OK]   ??? !GGUF_COUNT! ?? .gguf ??????
 )
 
-echo [OK]   ollama-models\Modelfile 已就绪
+echo [OK]   ollama-models\Modelfile ?????
 
 REM =============================================================================
-REM 步骤 5：创建离线包目录结构
+REM ???? 5???????????????
 REM =============================================================================
 echo.
-echo [构建] 正在创建离线包目录结构 ...
+echo [????] ???????????????? ...
 
 if exist "%BUNDLE_DIR%" (
-    echo [清理] 删除旧的 offline_bundle\ ...
+    echo [????] ?????? offline_bundle\ ...
     rmdir /s /q "%BUNDLE_DIR%"
 )
 
@@ -131,218 +131,239 @@ mkdir "%BUNDLE_DIR%\ollama-models"       >nul 2>&1
 mkdir "%BUNDLE_DIR%\python-wheels"       >nul 2>&1
 mkdir "%BUNDLE_DIR%\app"                 >nul 2>&1
 
-echo [OK]   目录结构已创建
+echo [OK]   ?????????
 
 REM =============================================================================
-REM 步骤 6：复制工具文件
+REM ???? 6????????????
 REM =============================================================================
-echo [构建] 正在复制工具文件 ...
+echo [????] ????????????? ...
 
-REM 6a. 复制 Ollama zip
-echo        复制 ollama-windows-amd64.zip ...
+REM 6a. ???? Ollama zip
+echo        ???? ollama-windows-amd64.zip ...
 copy "%SCRIPT_DIR%\tools\ollama-windows-amd64.zip" "%BUNDLE_DIR%\tools\" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 复制 ollama-windows-amd64.zip 失败
+    echo [????] ???? ollama-windows-amd64.zip ???
     pause
     exit /b 1
 )
 echo        [OK]   ollama-windows-amd64.zip
 
-REM 6b. 复制 Python 安装程序（如果有）
+REM 6b. ???? Python ???????????��?
 if "!PYTHON_INSTALLER_MISSING!"=="0" (
-    echo        复制 python-3.11.8-amd64.exe ...
+    echo        ???? python-3.11.8-amd64.exe ...
     copy "%SCRIPT_DIR%\tools\python-3.11.8-amd64.exe" "%BUNDLE_DIR%\tools\" >nul 2>&1
     if %errorlevel% neq 0 (
-        echo [错误] 复制 python-3.11.8-amd64.exe 失败
+        echo [????] ???? python-3.11.8-amd64.exe ???
         pause
         exit /b 1
     )
     echo        [OK]   python-3.11.8-amd64.exe
 ) else (
-    echo        [跳过] python-3.11.8-amd64.exe（未提供，内网机器需自行安装 Python）
+    echo        [????] python-3.11.8-amd64.exe??��?????????????????��?? Python??
 )
 
-REM 6c. 处理 VC++ Redistributable
-echo        处理 VC++ Redistributable ...
+REM 6c. ???? VC++ Redistributable
+echo        ???? VC++ Redistributable ...
 
 set "VCREDIST_COPIED=0"
 
-REM 尝试 1：从 tools\ollama\ 复制
+REM ???? 1???? tools\ollama\ ????
 if exist "%SCRIPT_DIR%\tools\ollama\vc_redist.x64.exe" (
     copy "%SCRIPT_DIR%\tools\ollama\vc_redist.x64.exe" "%BUNDLE_DIR%\tools\" >nul 2>&1
     if !errorlevel! equ 0 (
-        echo        [OK]   vc_redist.x64.exe（从 tools\ollama\ 复制）
+        echo        [OK]   vc_redist.x64.exe???? tools\ollama\ ?????
         set "VCREDIST_COPIED=1"
     )
 )
 
-REM 尝试 2：从 ollama zip 中提取
+REM ???? 2???? ollama zip ?????
 if "!VCREDIST_COPIED!"=="0" (
-    echo        正在从 ollama-windows-amd64.zip 中搜索 vc_redist...
+    echo        ????? ollama-windows-amd64.zip ?????? vc_redist...
     powershell -NoProfile -Command ^
         "$zip = [System.IO.Compression.ZipFile]::OpenRead('%SCRIPT_DIR%\tools\ollama-windows-amd64.zip');" ^
         "$entry = $zip.Entries | Where-Object { $_.Name -like 'vc_redist*.exe' } | Select-Object -First 1;" ^
         "if ($entry) {" ^
         "  [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, '%BUNDLE_DIR%\tools\vc_redist.x64.exe', $true);" ^
-        "  Write-Host '        [OK]   vc_redist.x64.exe（从 zip 提取）';" ^
+        "  Write-Host '        [OK]   vc_redist.x64.exe???? zip ?????';" ^
         "} else {" ^
-        "  Write-Host '        [提示] zip 中未找到 vc_redist*.exe';" ^
+        "  Write-Host '        [???] zip ??��??? vc_redist*.exe';" ^
         "}" ^
         "$zip.Dispose()"
     if exist "%BUNDLE_DIR%\tools\vc_redist.x64.exe" set "VCREDIST_COPIED=1"
 )
 
-REM 尝试 3：跳过
+REM ???? 3??????
 if "!VCREDIST_COPIED!"=="0" (
-    echo        [跳过] VC++ Redistributable 未找到，内网机器可能需要手动安装
-    echo              下载链接：https://aka.ms/vs/17/release/vc_redist.x64.exe
+    echo        [????] VC++ Redistributable ��??????????????????????????
+    echo              ?????????https://aka.ms/vs/17/release/vc_redist.x64.exe
 )
 
-echo [OK]   工具文件复制完成
+echo [OK]   ??????????????
 
 REM =============================================================================
-REM 步骤 7：下载 wheel 包
+REM ???? 7????????? venv ?????????????????��
 REM =============================================================================
-echo [构建] 正在下载 Python wheel 包 ...
-echo        这可能需要几分钟，请耐心等待...
+echo [????] ?????????? venv ??????????????????��??...
+echo        ???????????????????????...
 
-python -m pip download -r "%SCRIPT_DIR%\requirements.txt" ^
+set "BUILD_VENV=%SCRIPT_DIR%\.build_venv"
+
+REM ????????? venv
+if exist "%BUILD_VENV%" rmdir /s /q "%BUILD_VENV%" 2>nul
+
+python -m venv "%BUILD_VENV%" --clear >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [????] ??????? venv ???
+    pause
+    exit /b 1
+)
+
+"%BUILD_VENV%\Scripts\python.exe" -m pip install --upgrade pip --quiet 2>nul
+"%BUILD_VENV%\Scripts\pip.exe" install -r "%SCRIPT_DIR%\requirements.txt" --quiet
+if %errorlevel% neq 0 (
+    echo [????] ??? venv ???????????????????
+    rmdir /s /q "%BUILD_VENV%" 2>nul
+    pause
+    exit /b 1
+)
+
+echo [????] ???????? requirements.lock.txt??????????????????...
+"%BUILD_VENV%\Scripts\pip.exe" freeze > "%BUNDLE_DIR%\requirements.lock.txt"
+if %errorlevel% neq 0 (
+    echo [????] requirements.lock.txt ???????
+    rmdir /s /q "%BUILD_VENV%" 2>nul
+    pause
+    exit /b 1
+)
+
+echo [OK]   requirements.lock.txt ???????????????????
+
+REM =============================================================================
+REM ???? 8?????????? wheel ?????????????��??
+REM =============================================================================
+echo [????] ???????? Python wheel ?????????????��??...
+echo        ???????????????????????...
+
+"%BUILD_VENV%\Scripts\pip.exe" download -r "%BUNDLE_DIR%\requirements.lock.txt" ^
     --dest "%BUNDLE_DIR%\python-wheels" ^
     --platform win_amd64 ^
     --python-version 3.11 ^
     --only-binary=:all: >nul 2>&1
 
 if %errorlevel% neq 0 (
-    echo [错误] pip download 失败
-    echo        请检查网络连接，确保可以访问 PyPI
+    echo [????] pip download ???
+    echo        ??????????????????????? PyPI
+    rmdir /s /q "%BUILD_VENV%" 2>nul
     pause
     exit /b 1
 )
 
-REM 统计下载的 wheel 数量
+REM ??????????? venv
+rmdir /s /q "%BUILD_VENV%" 2>nul
+
+REM ???????? wheel ????
 set "WHEEL_COUNT=0"
 for %%D in ("%BUNDLE_DIR%\python-wheels\*.whl") do set /a WHEEL_COUNT+=1
-echo [OK]   已下载 !WHEEL_COUNT! 个 wheel 包
+echo [OK]   ?????? !WHEEL_COUNT! ?? wheel ??
 
 REM =============================================================================
-REM 步骤 8：生成 requirements.lock.txt
+REM ???? 9????????????
 REM =============================================================================
-echo [构建] 正在生成 requirements.lock.txt ...
+echo [????] ????????????? ...
 
-REM 8a. 生成完整 pip freeze
-python -m pip freeze > "%TEMP%\_comac_freeze_full.txt" 2>&1
-if %errorlevel% neq 0 (
-    echo [错误] pip freeze 执行失败
-    pause
-    exit /b 1
-)
-
-REM 8b. 提取 requirements.txt 中的包名
-> "%TEMP%\_comac_req_pkgs.txt" (
-    for /f "usebackq tokens=1 delims=>=<~!; " %%D in ("%SCRIPT_DIR%\requirements.txt") do (
-        set "PKG=%%D"
-        if not "!PKG!"=="" if not "!PKG!"=="-r" echo !PKG!
-    )
-)
-
-REM 8c. 使用 PowerShell 过滤：只保留 requirements.txt 中已有的包
-powershell -NoProfile -Command ^
-    "$reqPkgs = Get-Content '%TEMP%\_comac_req_pkgs.txt' | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ }; " ^
-    "$freezeLines = Get-Content '%TEMP%\_comac_freeze_full.txt'; " ^
-    "$filtered = $freezeLines | Where-Object { " ^
-    "  $pkg = ($_ -split '==')[0].Trim().ToLower(); " ^
-    "  $reqPkgs -contains $pkg " ^
-    "}; " ^
-    "$filtered | Out-File '%BUNDLE_DIR%\requirements.lock.txt' -Encoding UTF8"
-
-if %errorlevel% neq 0 (
-    echo [错误] requirements.lock.txt 生成失败
-    pause
-    exit /b 1
-)
-
-REM 清理临时文件
-del "%TEMP%\_comac_freeze_full.txt" >nul 2>&1
-del "%TEMP%\_comac_req_pkgs.txt"      >nul 2>&1
-
-echo [OK]   requirements.lock.txt 已生成
-
-REM =============================================================================
-REM 步骤 9：复制应用代码
-REM =============================================================================
-echo [构建] 正在复制应用代码 ...
-
-REM 9a. 复制 app.py（主入口）
+REM 9a. ???? app.py????????
 copy "%SCRIPT_DIR%\app.py" "%BUNDLE_DIR%\app\" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 复制 app.py 失败
+    echo [????] ???? app.py ???
     pause
     exit /b 1
 )
 echo        [OK]   app.py
 
-REM 9b. 复制顶层 .py 文件
+REM 9b. ??????? .py ???
 set "TOP_FILES=comac_assistant.py enhanced_assistant.py ollama_client.py ollama_rag.py config.py report_generator.py knowledge_graph.py knowledge_classifier.py excel_styler.py obsidian_sync.py task_manager.py verify_offline.py"
 for %%D in (%TOP_FILES%) do (
     if exist "%SCRIPT_DIR%\%%D" (
         copy "%SCRIPT_DIR%\%%D" "%BUNDLE_DIR%\app\" >nul 2>&1
         echo        [OK]   %%D
     ) else (
-        echo        [提示] %%D 不存在，已跳过
+        echo        [???] %%D ?????????????
     )
 )
 
-REM 9c. 复制 Python 子目录
+REM 9c. ???? Python ????
 set "SUB_DIRS=parsers converters fillers batch audit presentations blocks"
 for %%D in (%SUB_DIRS%) do (
     if exist "%SCRIPT_DIR%\%%D\" (
         robocopy "%SCRIPT_DIR%\%%D" "%BUNDLE_DIR%\app\%%D" *.py /s /njh /njs /ndl >nul 2>&1
         if !errorlevel! geq 8 (
-            echo [错误] 复制 %%D\ 目录失败
+            echo [????] ???? %%D\ ?????
             pause
             exit /b 1
         )
         echo        [OK]   %%D\
     ) else (
-        echo        [提示] %%D\ 目录不存在，已跳过
+        echo        [???] %%D\ ???????????????
     )
 )
 
-REM 9d. 复制静态资源和模板（不含 .py 但属于应用的一部分）
+REM 9d. ?????????????��???? .py ????????????????
 for %%D in (templates static) do (
     if exist "%SCRIPT_DIR%\%%D\" (
         robocopy "%SCRIPT_DIR%\%%D" "%BUNDLE_DIR%\app\%%D" /s /njh /njs /ndl >nul 2>&1
         if !errorlevel! geq 8 (
-            echo [错误] 复制 %%D\ 目录失败
+            echo [????] ???? %%D\ ?????
             pause
             exit /b 1
         )
         echo        [OK]   %%D\
     ) else (
-        echo        [提示] %%D\ 目录不存在，已跳过
+        echo        [???] %%D\ ???????????????
     )
 )
 
-echo [OK]   应用代码复制完成
+echo [OK]   ???????????
 
 REM =============================================================================
-REM 步骤 10：复制 ollama-models/
+REM ???? 10?????? ollama-models/
 REM =============================================================================
-echo [构建] 正在复制 ollama-models\ ...
+echo [????] ??????? ollama-models\ ...
 
 robocopy "%SCRIPT_DIR%\ollama-models" "%BUNDLE_DIR%\ollama-models" /s /njh /njs /ndl >nul 2>&1
 if %errorlevel% geq 8 (
-    echo [错误] 复制 ollama-models\ 失败
+    echo [????] ???? ollama-models\ ???
     pause
     exit /b 1
 )
 
-echo [OK]   ollama-models\ 复制完成
+echo [OK]   ollama-models\ ???????
 
 REM =============================================================================
-REM 步骤 11：生成 manifest.sha256
+REM ???? 11??????????????????????
 REM =============================================================================
-echo [构建] 正在生成 manifest.sha256 ...
+echo [????] ???????????? ...
+
+set "DEPLOY_FILES=install-offline.bat start.bat opencode.bat README.md requirements.txt"
+for %%D in (%DEPLOY_FILES%) do (
+    if exist "%SCRIPT_DIR%\%%D" (
+        copy "%SCRIPT_DIR%\%%D" "%BUNDLE_DIR%\" >nul 2>&1
+        if !errorlevel! neq 0 (
+            echo [????] ???? %%D ???
+            pause
+            exit /b 1
+        )
+        echo        [OK]   %%D
+    ) else (
+        echo        [???] %%D ?????????????
+    )
+)
+
+echo [OK]   ?????????????
+
+REM =============================================================================
+REM ???? 12?????? manifest.sha256
+REM =============================================================================
+echo [????] ???????? manifest.sha256 ...
 
 powershell -NoProfile -Command ^
     "$bundleDir = '%BUNDLE_DIR%'; " ^
@@ -355,18 +376,18 @@ powershell -NoProfile -Command ^
     "Pop-Location"
 
 if %errorlevel% neq 0 (
-    echo [错误] manifest.sha256 生成失败
+    echo [????] manifest.sha256 ???????
     pause
     exit /b 1
 )
 
-echo [OK]   manifest.sha256 已生成
+echo [OK]   manifest.sha256 ??????
 
 REM =============================================================================
-REM 步骤 12：统计与完成提示
+REM ???? 13?????????????
 REM =============================================================================
 echo.
-echo [统计] 正在计算离线包大小 ...
+echo [???] ??????????????�� ...
 
 for /f "usebackq tokens=1,2 delims= " %%D in (`powershell -NoProfile -Command ^
     "$size = (Get-ChildItem -Recurse -File '%BUNDLE_DIR%' | Measure-Object -Property Length -Sum).Sum; " ^
@@ -376,25 +397,25 @@ for /f "usebackq tokens=1,2 delims= " %%D in (`powershell -NoProfile -Command ^
 
 echo.
 echo ============================================================
-echo   构建完成！
+echo   ????????
 echo ============================================================
 echo.
-echo   离线包路径: %BUNDLE_DIR%
-echo   离线包大小: !BUNDLE_SIZE!
+echo   ?????��??: %BUNDLE_DIR%
+echo   ???????��: !BUNDLE_SIZE!
 echo.
-echo   包含内容:
-echo     - tools\          : Ollama + Python 安装程序 + VC++ Redist
-echo     - ollama-models\  : 模型文件（GGUF + Modelfile）
-echo     - python-wheels\  : Python 依赖包（!WHEEL_COUNT! 个 wheel）
-echo     - app\            : 应用程序代码
-echo     - requirements.lock.txt : 锁定的依赖版本
-echo     - manifest.sha256       : 所有文件 SHA-256 校验
+echo   ????????:
+echo     - tools\          : Ollama + Python ??????? + VC++ Redist
+echo     - ollama-models\  : ????????GGUF + Modelfile??
+echo     - python-wheels\  : Python ????????!WHEEL_COUNT! ?? wheel??
+echo     - app\            : ??��??????
+echo     - requirements.lock.txt : ???????????��
+echo     - manifest.sha256       : ??????? SHA-256 ��??
 echo.
-echo   下一步:
-echo     将 offline_bundle\ 整个目录复制到内网 Windows 10 机器，
-echo     然后运行 install-offline.bat（将在后续版本提供）。
+echo   ?????:
+echo     ?? offline_bundle\ ??????????????? Windows 10 ??????
+echo     ???? offline_bundle\ ??????????? install-offline.bat??
 echo.
-echo     内网机器首次安装预计 10-15 分钟。
+echo     ???????????????? 10-15 ?????
 echo.
 echo ============================================================
 

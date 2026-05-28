@@ -1,28 +1,27 @@
 @echo off
-chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 REM ============================================================================
-REM  COMAC-LocalAI-Windows — 部署初始化脚本（内网验证模式）
+REM  COMAC-LocalAI-Windows - Deployment Initialization Script
 REM
-REM  用途：
-REM    - 内网机器（无网）: 检查所有组件就绪，启动服务
-REM    - 有网机器（首次）: 运行 pre-deploy.bat 完成全部初始化
+REM  Purpose:
+REM    - Air-gapped machine: verify all components ready, start services
+REM    - Internet machine (first run): run pre-deploy.bat for full init
 REM
-REM  模型: qwen:7b-q4_K_M | Python 3.11+ | Windows 10+
+REM  Model: qwen:7b-q4_K_M | Python 3.11+ | Windows 10+
 REM ============================================================================
 
-title COMAC AI - 部署初始化
+title COMAC AI - Deployment Initialization
 
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
 REM ============================================================================
-REM  步骤 1: 检查 Python 运行时（必须是系统 Python，Embeddable 不可用）
+REM  Step 1: Check Python runtime (must be system Python 3.11+ full install)
 REM ============================================================================
 echo.
 echo ==============================================================
-echo   [1/7] 检查 Python 运行环境
+echo   [1/7] Checking Python runtime
 echo ==============================================================
 
 set "CHECK_PY="
@@ -34,193 +33,217 @@ if not errorlevel 1 (
     if defined CHECK_PY_VER (
         if !CHECK_PY_VER! GEQ 11 (
             set "CHECK_PY=python"
-            echo   [OK] 发现系统 Python 3.!CHECK_PY_VER!
+            echo   [OK] System Python 3.!CHECK_PY_VER! found
         )
     )
 )
 
 if not defined CHECK_PY (
-    REM 尝试使用内置 Python 安装包
+    REM Try built-in Python installer
     if exist "%SCRIPT_DIR%tools\python-3.11.8-amd64.exe" (
-        echo         未找到系统 Python，使用内置安装包...
-        echo         安装到 %LOCALAPPDATA%\Programs\Python\Python311
+        echo         System Python not found, using built-in installer...
+        echo         Installing to %LOCALAPPDATA%\Programs\Python\Python311
         "%SCRIPT_DIR%tools\python-3.11.8-amd64.exe" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0
         if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
             set "CHECK_PY=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
-            echo   [OK] Python 3.11 已安装
+            for /f "delims=" %%v in ('"%CHECK_PY%" -c "import sys; print(sys.version_info[1])" 2^>nul') do set "CHECK_PY_VER=%%v"
+            echo   [OK] Python 3.!CHECK_PY_VER! installed
         ) else (
-            echo   [错误] Python 安装失败
+            echo   [ERROR] Python installation failed
             pause
             exit /b 1
         )
     ) else (
-        echo   [错误] 未找到 Python 3.11+
+        echo   [ERROR] Python 3.11+ not found
         echo.
-        echo   本项目需要 Python 3.11 或更高版本。
+        echo   This project requires Python 3.11 or higher.
         echo.
-        echo   请在有网机器下载安装：
+        echo   Download from:
         echo   https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
         echo.
-        echo   安装时请务必勾选: "Add Python to PATH"
+        echo   Make sure to check "Add Python to PATH" during installation.
         echo.
         pause
         exit /b 1
     )
 )
 
-REM 验证 .venv 的 Python 版本与系统 Python 一致
+REM Verify .venv Python version matches system Python
 if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     for /f "delims=" %%v in ('"%SCRIPT_DIR%.venv\Scripts\python.exe" -c "import sys; print(sys.version_info[1])" 2^>nul') do set "VENV_PY_VER=%%v"
     if defined VENV_PY_VER (
         if not "!VENV_PY_VER!"=="!CHECK_PY_VER!" (
             echo.
-            echo   [错误] .venv 版本 (!VENV_PY_VER!) 与系统 Python 版本 (!CHECK_PY_VER!) 不匹配
+            echo   [ERROR] .venv version (!VENV_PY_VER!^) does not match system Python (!CHECK_PY_VER!^)
             echo.
-            echo   请在同一台机器上创建 .venv，或删除 .venv 后重新运行 pre-deploy.bat
+            echo   Please create .venv on this machine, or delete .venv and re-run.
             echo.
             pause
             exit /b 1
         )
-        echo   [OK] .venv Python 版本匹配（3.!VENV_PY_VER!）
+        echo   [OK] .venv Python version matches (3.!VENV_PY_VER!^)
     )
 )
 
 REM ============================================================================
-REM  步骤 2: 验证 .venv 依赖完整性
+REM  Step 2: Verify .venv dependency integrity
 REM ============================================================================
 echo ==============================================================
-echo   [2/7] 验证 .venv 依赖
+echo   [2/7] Verifying .venv dependencies
 echo ==============================================================
 
 if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
-    echo   [错误] .venv 不存在
-    echo.
-    echo   请先在有网机器运行 pre-deploy.bat 创建完整环境：
-    echo   1. 将本项目复制到有网机器
-    echo   2. 双击运行 pre-deploy.bat
-    echo   3. 等待初始化完成（约 10-20 分钟）
-    echo   4. 将整个项目目录复制到内网机器
-    echo.
-    pause
-    exit /b 1
+    REM .venv missing, try offline install from python-wheels
+    if exist "%SCRIPT_DIR%python-wheels\" if exist "%SCRIPT_DIR%requirements.lock.txt" (
+        echo         Offline wheels found, creating .venv and installing...
+        if defined CHECK_PY (
+            "!CHECK_PY!" -m venv "%SCRIPT_DIR%.venv" --clear >nul 2>&1
+        ) else (
+            python -m venv "%SCRIPT_DIR%.venv" --clear >nul 2>&1
+        )
+        if errorlevel 1 (
+            echo   [ERROR] .venv creation failed
+            pause
+            exit /b 1
+        )
+        "%SCRIPT_DIR%.venv\Scripts\pip.exe" install --upgrade pip --quiet 2>nul
+        "%SCRIPT_DIR%.venv\Scripts\pip.exe" install --no-index --find-links="%SCRIPT_DIR%python-wheels" -r "%SCRIPT_DIR%requirements.lock.txt" --quiet --disable-pip-version-check
+        if errorlevel 1 (
+            echo   [ERROR] Offline dependency install failed
+            echo          Check that python-wheels\ contains all required wheels.
+            pause
+            exit /b 1
+        )
+        echo   [OK] .venv created (offline install^)
+    ) else (
+        echo   [ERROR] .venv not found
+        echo.
+        echo   Choose one of the following to create the environment:
+        echo   1. Run install-offline.bat (for offline bundle deployment^)
+        echo   2. Run pre-deploy.bat on an internet-connected machine
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 set "VENV_PY=%SCRIPT_DIR%.venv\Scripts\python.exe"
 
-REM 快速验证核心依赖
+REM Quick verify core dependencies
 "%VENV_PY%" -c "import gradio; import ollama; import pandas; import docx; import pptx; import openpyxl; import pdfplumber; import pymupdf; import jinja2; import numpy; import colorama; print('OK')" 2>nul
 if errorlevel 1 (
-    echo   [错误] .venv 依赖不完整
+    echo   [ERROR] .venv dependencies incomplete
     echo.
-    echo   请在有网机器重新运行 pre-deploy.bat
+    echo   Please re-run pre-deploy.bat on an internet-connected machine.
     echo.
     pause
     exit /b 1
 )
-echo   [OK] .venv 依赖完整
+echo   [OK] .venv dependencies complete
 echo.
 
 REM ============================================================================
-REM  步骤 3: 提取内置 Ollama
+REM  Step 3: Extract built-in Ollama
 REM ============================================================================
 echo ==============================================================
-echo   [3/7] 初始化内置 Ollama
+echo   [3/7] Initializing built-in Ollama
 echo ==============================================================
 
 if not exist "%SCRIPT_DIR%logs" mkdir "%SCRIPT_DIR%logs" 2>nul
 
 if exist "%SCRIPT_DIR%tools\ollama\ollama.exe" (
-    echo   [OK] Ollama 已提取
+    echo   [OK] Ollama already extracted
 ) else (
     if not exist "%SCRIPT_DIR%tools\ollama-windows-amd64.zip" (
-        echo   [错误] tools\ollama-windows-amd64.zip 未找到
+        echo   [ERROR] tools\ollama-windows-amd64.zip not found
         pause
         exit /b 1
     )
-    echo         提取 Ollama（请稍等）...
+    echo         Extracting Ollama...
     powershell -NoProfile -Command "Expand-Archive -Force '%SCRIPT_DIR%tools\ollama-windows-amd64.zip' '%SCRIPT_DIR%tools\ollama'"
     if errorlevel 1 (
-        echo   [错误] Ollama 提取失败
+        echo   [ERROR] Ollama extraction failed
         pause
         exit /b 1
     )
-    echo   [OK] Ollama 提取完成
+    echo   [OK] Ollama extracted
 )
 
 REM ============================================================================
-REM  步骤 4: 安装 Visual C++ Redistributable
+REM  Step 4: Install Visual C++ Redistributable
 REM ============================================================================
 echo ==============================================================
-echo   [4/7] 安装 Visual C++ 运行时
+echo   [4/7] Installing Visual C++ Runtime
 echo ==============================================================
 
 if exist "%SCRIPT_DIR%tools\ollama\vc_redist.x64.exe" (
-    echo         检测到 VC++ 安装包，正在静默安装...
+    echo         VC++ installer found, installing silently...
     "%SCRIPT_DIR%tools\ollama\vc_redist.x64.exe" /install /quiet /norestart /log "%SCRIPT_DIR%logs\vc_install.log"
-    echo   [OK] VC++ 运行时已安装
+    echo   [OK] VC++ Runtime installed
 ) else (
-    echo   [提示] 未找到 VC++ 安装包，跳过
+    echo   [INFO] VC++ installer not found, skipping
 )
+echo.
 
 REM ============================================================================
-REM  步骤 5: 启动 Ollama 服务
+REM  Step 5: Start Ollama service
 REM ============================================================================
 echo ==============================================================
-echo   [5/7] 启动 Ollama 服务
+echo   [5/7] Starting Ollama service
 echo ==============================================================
 
 set "OLLAMA_BIN=%SCRIPT_DIR%tools\ollama\ollama.exe"
 set "OLLAMA_MODELS=%SCRIPT_DIR%ollama-cache"
 
-REM 检查 Ollama 服务是否已运行
-curl -s --connect-timeout 3 "http://localhost:11434/api/version" >nul 2>&1
+REM Check if Ollama is already running (dedicated port 11435)
+powershell -NoProfile -Command "try{$r=iwr "http://127.0.0.1:11435/api/version" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] Ollama 服务已在运行
+    echo   [OK] Ollama service already running
 ) else (
-    echo         启动 Ollama 服务（请稍等）...
+    echo         Starting Ollama service (port 11435^)...
     start /B "" "%OLLAMA_BIN%" serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
     for /L %%i in (1,1,20) do (
         timeout /t 2 /nobreak >nul
-        curl -s --connect-timeout 3 "http://localhost:11434/api/version" >nul 2>&1
+        powershell -NoProfile -Command "try{$r=iwr "http://127.0.0.1:11435/api/version" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
         if not errorlevel 1 goto :ollama_ok
     )
-    echo   [警告] Ollama 启动超时，继续...
+    echo   [WARN] Ollama startup timed out, continuing...
 )
 :ollama_ok
-echo   [OK] Ollama 服务就绪
+echo   [OK] Ollama service ready
 echo.
 
 REM ============================================================================
-REM  步骤 6: 检查 qwen:7b-q4_K_M 模型
+REM  Step 6: Check qwen:7b-q4_K_M model
 REM ============================================================================
 echo ==============================================================
-echo   [6/7] 检查 qwen 模型
+echo   [6/7] Checking qwen model
 echo ==============================================================
 
 "%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] qwen 模型已就绪（Ollama 缓存）
+    echo   [OK] qwen model ready (Ollama cache^)
 ) else (
     if exist "%SCRIPT_DIR%ollama-models\*.gguf" (
-        echo         发现本地 GGUF 文件，使用 Modelfile 创建模型（请稍等）...
+        echo         Local GGUF file found, creating model via Modelfile...
         if exist "%SCRIPT_DIR%ollama-models\Modelfile" (
             "%OLLAMA_BIN%" create qwen:7b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
             if errorlevel 1 (
-                echo   [错误] 模型创建失败
+                echo   [ERROR] Model creation failed
                 pause
                 exit /b 1
             )
-            echo   [OK] qwen:7b-q4_K_M 模型创建成功
+            echo   [OK] qwen:7b-q4_K_M model created
         ) else (
-            echo   [错误] 缺少 Modelfile
+            echo   [ERROR] Modelfile missing
             pause
             exit /b 1
         )
     ) else (
-        echo   [错误] 未找到 GGUF 模型文件
+        echo   [ERROR] No GGUF model file found
         echo.
-        echo   请在有网机器运行 pre-deploy.bat 下载模型
-        echo   或将 qwen2.5-7b-instruct-q4_k_m.gguf 放入 ollama-models\
+        echo   Run pre-deploy.bat on an internet machine to download the model,
+        echo   or place qwen2.5-7b-instruct-q4_k_m.gguf in ollama-models\
         pause
         exit /b 1
     )
@@ -228,18 +251,18 @@ if not errorlevel 1 (
 echo.
 
 REM ============================================================================
-REM  步骤 7: 初始化配置
+REM  Step 7: Initialize configuration
 REM ============================================================================
 echo ==============================================================
-echo   [7/7] 初始化配置
+echo   [7/7] Initializing configuration
 echo ==============================================================
 
-REM Ollama 环境变量（当前 CMD 会话生效）
+REM Ollama env vars (current CMD session)
 setx OLLAMA_NUM_PARALLEL 1 >nul 2>&1
 setx OLLAMA_MAX_LOADED_MODELS 1 >nul 2>&1
 setx OLLAMA_KEEP_ALIVE 5m >nul 2>&1
 
-REM 创建运行时目录
+REM Create runtime directories
 for %%D in (
     "temp\uploads"
     "temp\outputs"
@@ -250,42 +273,42 @@ for %%D in (
     if not exist "%%~D" mkdir "%%~D" 2>nul
 )
 
-REM 生成 .env
+REM Generate .env
 if not exist ".env" (
-    REM 使用 PowerShell 生成随机 16 位密码
+    REM Generate random 16-char password via PowerShell
     for /f "delims=" %%P in ('powershell -NoProfile -Command "-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 16 | %%{[char]$_})"') do set "RANDOM_PASS=%%P"
     (
-        echo # COMAC AI 配置文件
-        echo # 首次部署已自动生成随机密码
+        echo # COMAC AI Configuration
+        echo # Auto-generated on first deploy
         echo GRADIO_USER=admin
         echo GRADIO_PASS=!RANDOM_PASS!
         echo COMAC_MODEL=qwen:7b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
-        echo OLLAMA_HOST=localhost:11434
+        echo OLLAMA_HOST=127.0.0.1:11435
     ) > .env
-    echo   [OK] .env 已生成
-    echo   [重要] 初始密码: !RANDOM_PASS!（请妥善保存）
+    echo   [OK] .env generated
+    echo   [IMPORTANT] Initial password: !RANDOM_PASS! ^(save this^)
 ) else (
-    echo   [OK] .env 已存在
+    echo   [OK] .env already exists
 )
 
 REM ============================================================================
-REM  完成
+REM  Done
 REM ============================================================================
 echo ==============================================================
-echo   部署初始化完成！
+echo   Deployment initialization complete!
 echo ==============================================================
 echo.
-echo   下一步:
-echo   1. 修改 .env 中的 GRADIO_PASS 密码
-echo   2. 双击运行 start.bat 启动服务
-echo   3. 访问 http://localhost:7860
+echo   Next steps:
+echo   1. Edit GRADIO_PASS in .env to change the password
+echo   2. Double-click start.bat to launch the service
+echo   3. Visit http://localhost:7860
 echo.
-echo   组件状态:
-echo   - Python: !CHECK_PY_VER!  (系统)
-echo   - .venv:  完整
+echo   Component status:
+echo   - Python: !CHECK_PY_VER!  ^(system^)
+echo   - .venv:  ready
 echo   - Ollama: tools\ollama\ollama.exe
-echo   - 模型:   qwen:7b-q4_K_M
-echo   - 认证:   admin / (请修改 .env)
+echo   - Model:  qwen:7b-q4_K_M
+echo   - Auth:   admin / ^(edit .env to change^)
 echo.
 pause

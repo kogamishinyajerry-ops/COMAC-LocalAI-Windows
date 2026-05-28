@@ -65,7 +65,7 @@ def _load_config():
     except Exception:
         _cfg = {
             "model": os.environ.get("COMAC_MODEL", "qwen:7b-q4_K_M"),
-            "host": os.environ.get("OLLAMA_HOST", "localhost:11434"),
+            "host": os.environ.get("OLLAMA_HOST", "127.0.0.1:11435"),
             "ctx": 8192,
             "predict": 2048,
         }
@@ -79,7 +79,7 @@ def chat_stream(
     model: str,
     messages: List[Dict[str, str]],
     system: Optional[str] = None,
-    host: str = "localhost:11434",
+    host: str = "127.0.0.1:11435",
 ):
     """
     通过 ollama API 流式对话（直接使用 ollama Python 包的底层实现，
@@ -202,7 +202,7 @@ def main():
     parser.add_argument(
         "--host",
         default=None,
-        help="Ollama 服务地址（默认: localhost:11434）",
+        help="Ollama 服务地址（默认: 127.0.0.1:11435）",
     )
     args = parser.parse_args()
 

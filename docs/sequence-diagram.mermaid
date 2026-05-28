@@ -1,59 +1,107 @@
 sequenceDiagram
-    actor User
-    participant UI as Gradio App
+    actor User as 内网用户
+    participant I as install-offline.bat
+    participant Py as Python Installer
+    participant Venv as .venv
+    participant Pip as pip (offline)
+    participant Ollama as Ollama Service
+    participant FS as File System
+
+    rect rgb(40, 60, 100)
+        Note over User,FS: === install-offline.bat 完整离线安装流程 ===
+    end
+
+    User->>I: 双击运行 install-offline.bat
+    I->>FS: 检查 tools/python-3.11.8-amd64.exe
+    alt Python 未安装
+        I->>Py: 静默安装 python-3.11.8-amd64.exe
+        Py-->>I: Python 安装完成
+    end
+    I->>I: 定位 Python 路径
+    I->>Venv: python -m venv .venv
+    Venv-->>I: .venv 创建完成
+    I->>Pip: pip install --no-index --find-links=python-wheels -r requirements.lock.txt
+    Pip-->>I: 依赖安装完成
+    I->>FS: 检查 tools/ollama-windows-amd64.zip
+    I->>FS: powershell Expand-Archive → tools/ollama/
+    I->>FS: 安装 vc_redist.x64.exe (静默)
+    I->>Ollama: start /B ollama.exe serve
+    loop 等待启动 (最多 20 次)
+        I->>Ollama: curl http://localhost:11435/api/version
+    end
+    Ollama-->>I: 服务就绪
+    I->>Ollama: ollama create qwen:7b-q4_K_M -f ollama-models/Modelfile
+    Ollama-->>I: 模型创建完成
+    I->>FS: 写入 .env (OLLAMA_HOST=localhost:11435 + 随机密码)
+    I-->>User: ✅ 离线安装完成！请运行 start.bat
+
+    rect rgb(60, 40, 100)
+        Note over User,FS: === build-offline-package.bat 构建流程 (F4 修复后) ===
+    end
+
+    participant BB as build-offline-package.bat
+    participant BV as .build_venv (临时)
+    participant BD as offline_bundle/
+
+    User->>BB: 双击运行 build-offline-package.bat
+    BB->>FS: 检查 Python 3.11+
+    BB->>FS: 检查 Ollama zip / Python installer / GGUF
+    BB->>FS: 创建 offline_bundle/ 目录结构
+    BB->>BD: 复制 tools/ (Ollama zip + Python installer + VC++)
+    BB->>BB: === F4 修复: 重写依赖锁定步骤 ===
+    BB->>BV: python -m venv .build_venv
+    BB->>BV: pip install -r requirements.txt
+    BV-->>BB: 完整依赖树安装完成
+    BB->>BV: pip freeze > requirements.lock.txt
+    BB->>BD: 复制 requirements.lock.txt
+    BB->>BV: pip download -r requirements.lock.txt --dest python-wheels
+    BB->>BD: 复制 python-wheels/*.whl
+    BB->>BV: 清理 .build_venv
+    BB->>BD: 复制 app/ 代码
+    BB->>BD: 复制 ollama-models/
+    BB->>BD: === F2 修复: 复制部署脚本 ===
+    BB->>BD: 复制 install-offline.bat
+    BB->>BD: 复制 start.bat
+    BB->>BD: 复制 opencode.bat
+    BB->>BD: 复制 README.md
+    BB->>BD: 生成 manifest.sha256
+    BB-->>User: ✅ 离线包构建完成！
+
+    rect rgb(40, 100, 60)
+        Note over User,FS: === RAG 文档索引流程 (F7 修复后) ===
+    end
+
+    actor AU as 应用用户
     participant RAG as OllamaRAG
+    participant PF as ParserFactory
+    participant EP as ExcelParser
     participant VS as SimpleVectorStore
     participant OC as OllamaClient
 
-    Note over User,OC: === P1-7: RAG 一键索引 ===
-
-    User->>UI: 点击 "📚 索引 docs 目录"
-    UI->>RAG: OllamaRAG()
-    RAG->>RAG: _check_embed_model()
-    UI->>RAG: index_documents("./docs")
-    RAG->>RAG: 遍历 docs/ (*.md, *.txt, *.pdf)
+    AU->>RAG: index_documents("./docs")
+    RAG->>FS: 遍历 *.md, *.txt, *.pdf, *.docx, *.pptx, *.xlsx, *.csv
     loop 每个文件
+        alt .md / .txt
+            RAG->>FS: read_text()
+        else .pdf
+            RAG->>FS: pdfplumber.open()
+        else .docx / .pptx / .xlsx / .csv
+            RAG->>PF: ParserFactory.extract_text(file_path)
+            PF->>EP: parse(file_path)
+            alt .csv
+                EP->>EP: pd.read_csv(file_path)
+            else .xlsx
+                EP->>EP: pd.ExcelFile(file_path)
+            end
+            EP-->>PF: Document.content
+            PF-->>RAG: 文本内容
+        end
         RAG->>RAG: _chunk_text(content)
-        RAG->>RAG: _get_embedding(chunk)
-        RAG->>VS: add_chunk(chunk, doc_id)
+        loop 每个 chunk
+            RAG->>OC: embeddings(chunk_text)
+            OC-->>RAG: embedding vector
+            RAG->>VS: add_chunk(chunk)
+        end
+        RAG->>VS: _save_index()
     end
-    RAG->>VS: _save_index()
-    RAG-->>UI: chunk_count
-    UI->>RAG: get_stats()
-    RAG-->>UI: {total_documents, total_chunks}
-    UI-->>User: "✅ 索引完成"
-
-    Note over User,OC: === P1-7: RAG 简答模式 ===
-
-    User->>UI: 勾选"简答模式" + 提问
-    UI->>UI: rag_query(q, top_k, simple=True)
-    UI->>OC: OllamaClient(MODEL_DOC)
-    OC->>OC: generate("请回答：{q}", temp=0.3)
-    OC-->>UI: answer
-    UI-->>User: 回答内容
-
-    Note over User,OC: === P1-10: 知识图谱文件上传 ===
-
-    User->>UI: 上传文档 + 点击构建图谱
-    UI->>UI: build_knowledge_graph(text_input, file_obj)
-    UI->>UI: save_file(file_obj)
-    UI->>UI: parser.parse(file_path)
-    UI->>UI: doc.content
-    UI->>UI: KnowledgeGraphBuilder.extract_from_text()
-    UI-->>User: 图谱结果（实体+关系+Mermaid）
-
-    Note over User,OC: === P1-11: 增强模式 Agent ===
-
-    User->>UI: 点击 "⚡ 增强模式 (Harness)"
-    UI->>UI: multi_agent_enhanced(task, agents, context)
-    UI->>UI: EnhancedCOMACAssistant()
-    UI->>UI: harness = AdvancedHarness(config)
-
-    loop 每个选中的 Agent
-        UI->>UI: _build_agent_prompt(agent, task, context)
-        UI->>UI: harness.execute_with_harness(task, llm_call, context)
-        UI->>OC: llm_call(prompt) [Self-Correction]
-        OC-->>UI: generated text
-    end
-
-    UI-->>User: 格式化的多 Agent 输出 [增强模式]
+    RAG-->>AU: 索引完成统计

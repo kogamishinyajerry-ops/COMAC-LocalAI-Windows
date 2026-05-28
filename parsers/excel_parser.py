@@ -4,6 +4,17 @@ from parsers.base_parser import BaseParser, Document
 
 class ExcelParser(BaseParser):
     def parse(self, file_path: str) -> Document:
+        path = Path(file_path)
+        if path.suffix.lower() == '.csv':
+            df = pd.read_csv(file_path)
+            content = df.to_string()
+            return Document(
+                content=content,
+                metadata={"format": "csv"},
+                format="csv",
+                pages=[content]
+            )
+
         excel_file = pd.ExcelFile(file_path)
         sheets = {}
         for sheet_name in excel_file.sheet_names:

@@ -138,7 +138,7 @@ class COMACExcelStyler:
         ws["A2"].alignment = ALIGN_CENTER
 
         ws.merge_cells("A4:G4")
-        ws["A4"] = "— 内部资料 注意保密 —"
+        ws["A4"] = "— COMAC AI 文档处理平台 —"
         ws["A4"].font = Font(name=FONT_FAMILY, size=9, color="999999")
         ws["A4"].alignment = ALIGN_CENTER
 
@@ -329,7 +329,7 @@ def create_engine_lessons_template() -> Tuple[Workbook, COMACExcelStyler, List[S
             config = SheetConfig(
                 name=f"{ac}-{cat}",
                 title=f"{ac} 动力装置系统经验教训 — {cat}",
-                subtitle="编制单位：动力装置部 | 密级：内部",
+                subtitle="编制单位：动力装置部",
                 columns=COLUMNS,
             )
             configs.append(config)

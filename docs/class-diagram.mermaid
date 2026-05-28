@@ -1,10 +1,7 @@
 classDiagram
-    class ParserFactory {
-        -Dict _parsers$
-        +get_parser(file_path)$ BaseParser
-        +parse(file_path)$ Document
-        +extract_text(file_path)$ str
-    }
+    %% ============================================================
+    %% RAG 引擎核心类（F7 修复后）
+    %% ============================================================
 
     class OllamaRAG {
         -str embed_model
@@ -13,111 +10,119 @@ classDiagram
         -int chunk_overlap
         -OllamaClient _embed_client
         -OllamaClient _llm_client
-        -SimpleVectorStore vector_store
         -bool _embed_available
+        -SimpleVectorStore vector_store
         +index_documents(path, recursive) int
         +index_file(file_path) int
+        +sync_index(path, recursive) Dict
         +query(question, top_k, context_mode) str
-        +get_stats() Dict
-        +sync_index(path) Dict
         +rebuild_index(path) int
+        +get_stats() Dict
         -_check_embed_model() bool
         -_get_embedding(text) List~float~
         -_chunk_text(text) List~str~
         -_compute_hash(content) str
+        -_remove_from_index(file_path) void
     }
 
     class SimpleVectorStore {
         -Path index_path
-        -Dict documents
-        -Dict chunks
-        +add_chunk(chunk, doc_id)
+        -Dict~str,Document~ documents
+        -Dict~str,Chunk~ chunks
+        +add_chunk(chunk, doc_id) void
         +search(query_embedding, top_k) List~Tuple~
-        +clear()
-        -_load_index()
-        -_save_index()
+        +clear() void
+        -_load_index() void
+        -_save_index() void
         -_search_naive(query_embedding, top_k) List~Tuple~
     }
 
-    class COMACAssistant {
-        -str model
-        -str embed_model
-        -str index_path
-        -OllamaRAG _rag
-        -Dict _client_cache
-        +load_documents(path) bool
-        +query(question, mode) str
-        +multi_agent_task(task, agents, context, timeout) Dict
-        +sync_to_obsidian(vault_path, title, content, folder, tags) str
-        +get_status() Dict
-        -_build_agent_prompt(agent, task, context) str
-        -_summarize_results(task, results) str
+    class Chunk {
+        +str id
+        +str content
+        +Dict metadata
+        +List~float~ embedding
     }
 
-    class EnhancedCOMACAssistant {
-        -str model
-        -str embed_model
-        -OllamaRAG _rag
-        -AdvancedHarness _harness
-        -ChainOfThought _cot
-        -List _quality_gates
-        +query(question, mode, use_cot) str
-        +multi_agent_task(task, agents, context, use_harness) Dict
-        +get_harness_stats() Dict
-        -_query_with_harness(question) str
-        -_query_with_cot(question, mode) str
-        -_build_agent_prompt(agent, task, context) str
-        -_get_client(model) OllamaClient
+    class Document {
+        +str path
+        +List~Chunk~ chunks
+        +str content_hash
     }
 
-    class GradioApp {
-        +SUPPORTED_FORMATS List~str~
-        +rag_query(question, top_k, simple) str
-        +index_docs() str
-        +build_knowledge_graph(text_input, file_obj, doc_id) str
-        +multi_agent_process(task, agents_selected, context) str
-        +multi_agent_enhanced(task, agents_selected, context) str
-        +summarize(file_obj, mode) str
-        +polish_text(input_text, style) str
-        +convert_file(file_obj, conversion_type) str
-        +process_excel(file_obj, template_type) str
-        +detect_sensitive(file_obj) str
+    %% ============================================================
+    %% 解析器类层次（F7 修复后）
+    %% ============================================================
+
+    class BaseParser {
+        <<abstract>>
+        +parse(file_path)* Document
+        +extract_text(file_path)* str
     }
 
-    class AgentRole {
-        <<enumeration>>
-        CHIEF_EDITOR
-        PROOFREADER
-        DOCUMENT_AGENT
-        KNOWLEDGE_AGENT
-        VISUALIZATION
+    class ParserFactory {
+        -Dict _parsers$
+        +get_parser(file_path)$ BaseParser
+        +parse(file_path)$ Document
+        +extract_text(file_path)$ str
     }
 
-    class Agent {
-        +str name
-        +AgentRole role
-        +str specialty
-        +str model
+    class ExcelParser {
+        +parse(file_path) Document
+        +extract_text(file_path) str
+        Note: F7修复 — .csv用pd.read_csv()<br/>.xlsx/.xls用pd.ExcelFile()
     }
+
+    class WordParser {
+        +parse(file_path) Document
+        +extract_text(file_path) str
+    }
+
+    class PDFParser {
+        +parse(file_path) Document
+        +extract_text(file_path) str
+    }
+
+    class PPTParser {
+        +parse(file_path) Document
+        +extract_text(file_path) str
+    }
+
+    class TextParser {
+        +parse(file_path) Document
+        +extract_text(file_path) str
+    }
+
+    %% ============================================================
+    %% Ollama 客户端（无变更）
+    %% ============================================================
 
     class OllamaClient {
         -str model
-        +generate(prompt, temperature) str
+        -str host
+        +generate(prompt, temperature, num_predict) str
         +embeddings(text) Dict
         +list_models() List~str~
+        +check_model() bool
+        Note: list_models() 使用 response.models 属性
     }
 
-    ParserFactory --> OllamaRAG : 文档解析
-    GradioApp --> OllamaRAG : RAG 查询/索引
-    GradioApp --> COMACAssistant : 标准 Agent
-    GradioApp --> EnhancedCOMACAssistant : 增强 Agent
-    COMACAssistant --> OllamaRAG : 知识检索
-    COMACAssistant --> OllamaClient : LLM 推理
-    COMACAssistant --> AgentRole : 角色定义
-    COMACAssistant --> Agent : Agent 实例
-    EnhancedCOMACAssistant --> OllamaRAG : 知识检索
-    EnhancedCOMACAssistant --> OllamaClient : LLM 推理
-    EnhancedCOMACAssistant --> AgentRole : 角色定义
-    EnhancedCOMACAssistant --> Agent : Agent 实例
-    OllamaRAG --> SimpleVectorStore : 向量存储
-    OllamaRAG --> OllamaClient : Embedding/LLM
+    %% ============================================================
+    %% 关系
+    %% ============================================================
+
+    OllamaRAG *-- SimpleVectorStore : contains
+    OllamaRAG *-- OllamaClient : uses (2 instances)
+    SimpleVectorStore o-- Chunk : stores
+    SimpleVectorStore o-- Document : stores
+    Document o-- Chunk : contains
+
+    BaseParser <|-- ExcelParser : extends
+    BaseParser <|-- WordParser : extends
+    BaseParser <|-- PDFParser : extends
+    BaseParser <|-- PPTParser : extends
+    BaseParser <|-- TextParser : extends
+
+    ParserFactory --> BaseParser : creates/manages
+    OllamaRAG ..> ParserFactory : uses (F7 new)
+    OllamaRAG --> OllamaClient : uses for embeddings

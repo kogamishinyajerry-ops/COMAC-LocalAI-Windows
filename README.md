@@ -131,8 +131,8 @@ COMAC-LocalAI-Windows/
 | `GRADIO_PASS` | `change_me_123` | Web UI 密码（**必须修改**） |
 | `COMAC_MODEL` | `qwen:7b-q4_K_M` | 主模型名称 |
 | `COMAC_EMBED_MODEL` | `nomic-embed-text` | 向量嵌入模型 |
-| `OLLAMA_HOST` | `localhost:11434` | Ollama 服务地址 |
+| `OLLAMA_HOST` | `127.0.0.1:11435` | Ollama 服务地址 |
 
 ## 许可证
 
-内部使用，请勿外传。
+MIT License — 详见 LICENSE 文件。

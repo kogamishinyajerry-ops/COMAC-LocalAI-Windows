@@ -1,212 +1,211 @@
 @echo off
-chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 REM ============================================================================
-REM  COMAC-LocalAI-Windows — 有网机器初始化脚本
-REM  模型: qwen:7b-q4_K_M
+REM  COMAC-LocalAI-Windows - Internet Machine Initialization
+REM  Model: qwen:7b-q4_K_M
 REM
-REM  用法: 在有网机器上双击运行一次，完成全部初始化
-REM  完成后将整个项目目录复制到内网机器
+REM  Usage: Run once on an internet-connected machine for full setup.
+REM  After completion, copy the entire project directory to the air-gapped machine.
 REM ============================================================================
 
-title COMAC AI - 有网环境初始化
+title COMAC AI - Online Initialization
 
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
 REM ============================================================================
-REM  前置检查: Python
+REM  Pre-check: Python
 REM ============================================================================
 echo.
 echo ==============================================================
-echo   欢迎使用 COMAC AI 初始化脚本
-echo   此脚本需要互联网连接（约 20-30 分钟）
+echo   Welcome to COMAC AI Initialization
+echo   Requires internet connection (~20-30 minutes^)
 echo ==============================================================
 echo.
 
 where python >nul 2>&1
 if errorlevel 1 (
-    echo   [错误] 未找到 Python
-    echo   请先安装 Python 3.11+：https://www.python.org/ftp/python/
+    echo   [ERROR] Python not found
+    echo   Please install Python 3.11+: https://www.python.org/ftp/python/
     pause
     exit /b 1
 )
 
 for /f "delims=" %%v in ('python -c "import sys; print(sys.version_info[1])" 2^>nul') do set "PY_VER=%%v"
 if !PY_VER! LSS 11 (
-    echo   [错误] Python 版本过低，需要 3.11+
+    echo   [ERROR] Python version too low, need 3.11+
     pause
     exit /b 1
 )
-echo   [OK] Python 3.!PY_VER! 就绪
+echo   [OK] Python 3.!PY_VER! ready
 
 REM ============================================================================
-REM  步骤 1: 创建 / 更新 .venv
+REM  Step 1: Create / Update .venv
 REM ============================================================================
 echo.
 echo ==============================================================
-echo   [1/6] 创建 Python 虚拟环境
+echo   [1/6] Creating Python virtual environment
 echo ==============================================================
 
 if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     for /f "delims=" %%v in ('"%SCRIPT_DIR%.venv\Scripts\python.exe" -c "import sys; print(sys.version_info[1])" 2^>nul') do set "VENV_VER=%%v"
     if defined VENV_VER (
         if "!VENV_VER!"=="!PY_VER!" (
-            echo         .venv 已存在且版本匹配（Python 3.!VENV_VER!）
-            echo         跳过创建，尝试更新依赖...
+            echo         .venv exists with matching version (Python 3.!VENV_VER!^)
+            echo         Skipping creation, will update dependencies...
             goto :update_deps
         ) else (
-            echo         .venv 版本不匹配，删除后重建...
+            echo         .venv version mismatch, deleting and recreating...
             rmdir /S /Q "%SCRIPT_DIR%.venv" 2>nul
         )
     )
 )
 
-echo         创建 .venv（请稍等）...
+echo         Creating .venv...
 python -m venv .venv --clear >nul 2>&1
 if errorlevel 1 (
-    echo   [错误] .venv 创建失败
+    echo   [ERROR] .venv creation failed
     pause
     exit /b 1
 )
-echo   [OK] .venv 创建完成（Python 3.!PY_VER!）
+echo   [OK] .venv created (Python 3.!PY_VER!^)
 
 :update_deps
 echo.
 echo ==============================================================
-echo   [2/6] 安装 Python 依赖
+echo   [2/6] Installing Python dependencies
 echo ==============================================================
 
-echo         安装所有依赖包（约 5-10 分钟，请稍等）...
+echo         Installing all dependencies (~5-10 min^)...
 "%SCRIPT_DIR%.venv\Scripts\pip.exe" install --upgrade pip --quiet 2>nul
 "%SCRIPT_DIR%.venv\Scripts\pip.exe" install -r requirements.txt --quiet --disable-pip-version-check
 if errorlevel 1 (
-    echo   [错误] 依赖安装失败，请检查网络
+    echo   [ERROR] Dependency install failed, check internet connection
     pause
     exit /b 1
 )
 
-REM 验证核心依赖
+REM Verify core dependencies
 "%SCRIPT_DIR%.venv\Scripts\python.exe" -c "import gradio; import ollama; import pandas; print('OK')" 2>nul
 if errorlevel 1 (
-    echo   [错误] 依赖验证失败
+    echo   [ERROR] Dependency verification failed
     pause
     exit /b 1
 )
-echo   [OK] Python 依赖安装完成
+echo   [OK] Python dependencies installed
 echo.
 
 REM ============================================================================
-REM  步骤 3: 提取 Ollama
+REM  Step 3: Extract Ollama
 REM ============================================================================
 echo ==============================================================
-echo   [3/6] 初始化 Ollama
+echo   [3/6] Initializing Ollama
 echo ==============================================================
 
 if not exist "%SCRIPT_DIR%logs" mkdir "%SCRIPT_DIR%logs" 2>nul
 
 if exist "%SCRIPT_DIR%tools\ollama\ollama.exe" (
-    echo   [OK] Ollama 已提取
+    echo   [OK] Ollama already extracted
 ) else (
     if not exist "%SCRIPT_DIR%tools\ollama-windows-amd64.zip" (
-        echo   [错误] tools\ollama-windows-amd64.zip 未找到
+        echo   [ERROR] tools\ollama-windows-amd64.zip not found
         pause
         exit /b 1
     )
-    echo         提取 Ollama（请稍等）...
+    echo         Extracting Ollama...
     powershell -NoProfile -Command "Expand-Archive -Force '%SCRIPT_DIR%tools\ollama-windows-amd64.zip' '%SCRIPT_DIR%tools\ollama'"
-    echo   [OK] Ollama 提取完成
+    echo   [OK] Ollama extracted
 )
 
-REM 安装 VC++ Redistributable
+REM Install VC++ Redistributable
 if exist "%SCRIPT_DIR%tools\ollama\vc_redist.x64.exe" (
-    echo         安装 VC++ 运行时...
+    echo         Installing VC++ Runtime...
     "%SCRIPT_DIR%tools\ollama\vc_redist.x64.exe" /install /quiet /norestart /log "%SCRIPT_DIR%logs\vc_install.log"
-    echo   [OK] VC++ 运行时已安装
+    echo   [OK] VC++ Runtime installed
 )
 
 REM ============================================================================
-REM  步骤 4: 启动 Ollama 服务
+REM  Step 4: Start Ollama service
 REM ============================================================================
 echo ==============================================================
-echo   [4/6] 启动 Ollama 服务
+echo   [4/6] Starting Ollama service
 echo ==============================================================
 
 set "OLLAMA_BIN=%SCRIPT_DIR%tools\ollama\ollama.exe"
 set "OLLAMA_MODELS=%SCRIPT_DIR%ollama-cache"
 
-curl -s --connect-timeout 5 "http://localhost:11434/api/version" >nul 2>&1
+powershell -NoProfile -Command "try{$r=iwr "http://127.0.0.1:11435/api/version" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] Ollama 服务已在运行
+    echo   [OK] Ollama service already running
 ) else (
-    echo         启动 Ollama 服务（请稍等）...
+    echo         Starting Ollama service (port 11435^)...
     start /B "" "%OLLAMA_BIN%" serve > "%SCRIPT_DIR%logs\ollama.log" 2>&1
     for /L %%i in (1,1,20) do (
         timeout /t 2 /nobreak >nul
-        curl -s --connect-timeout 3 "http://localhost:11434/api/version" >nul 2>&1
+        powershell -NoProfile -Command "try{$r=iwr "http://127.0.0.1:11435/api/version" -TimeoutSec 3 -UseBasicParsing;exit 0}catch{exit 1}" >nul 2>&1
         if not errorlevel 1 goto :ollama_ready
     )
-    echo   [警告] Ollama 启动超时，继续...
+    echo   [WARN] Ollama startup timed out, continuing...
 )
 :ollama_ready
-echo   [OK] Ollama 服务就绪
+echo   [OK] Ollama service ready
 echo.
 
 REM ============================================================================
-REM  步骤 5: 下载 qwen:7b-q4_K_M 模型
+REM  Step 5: Download qwen:7b-q4_K_M model
 REM ============================================================================
 echo ==============================================================
-echo   [5/6] 下载 qwen:7b-q4_K_M 模型（约 4.5 GB）
+echo   [5/6] Downloading qwen:7b-q4_K_M model (~4.5 GB^)
 echo ==============================================================
 
 "%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] qwen 模型已在 Ollama 缓存中
+    echo   [OK] qwen model already in Ollama cache
 ) else (
     if exist "%SCRIPT_DIR%ollama-models\*.gguf" (
-        echo         发现本地 GGUF 文件，创建模型（请稍等）...
+        echo         Local GGUF file found, creating model...
         if exist "%SCRIPT_DIR%ollama-models\Modelfile" (
             "%OLLAMA_BIN%" create qwen:7b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
             if errorlevel 1 (
-                echo   [错误] 模型创建失败
+                echo   [ERROR] Model creation failed
                 pause
                 exit /b 1
             )
-            echo   [OK] qwen:7b-q4_K_M 模型创建成功
+            echo   [OK] qwen:7b-q4_K_M model created
         )
     ) else (
-        echo         正在从 Ollama 官方仓库下载模型（约 4.5 GB）
-        echo         此过程较长，请耐心等待，不要关闭此窗口
+        echo         Downloading from Ollama registry (~4.5 GB^)
+        echo         This will take a while, please do not close this window.
         echo.
         "%OLLAMA_BIN%" pull qwen:7b-q4_K_M
         if errorlevel 1 (
             echo.
-            echo   [错误] 模型下载失败
-            echo   请检查网络后重新运行 pre-deploy.bat
+            echo   [ERROR] Model download failed
+            echo   Check internet connection and re-run pre-deploy.bat
             pause
             exit /b 1
         )
-        echo   [OK] qwen:7b-q4_K_M 模型下载成功
+        echo   [OK] qwen:7b-q4_K_M model downloaded
     )
 )
     
-    REM 尝试下载 embedding 模型（可选，失败不阻断）
-    echo         下载 embedding 模型（可选）...
+    REM Try downloading embedding model (optional, non-blocking)
+    echo         Downloading embedding model (optional^)...
     "%OLLAMA_BIN%" pull nomic-embed-text 2>nul
     if errorlevel 1 (
-        echo   [提示] embedding 模型 nomic-embed-text 下载失败
-        echo          RAG 将使用主模型 qwen:7b-q4_K_M 生成向量
+        echo   [INFO] Embedding model nomic-embed-text download failed
+        echo         RAG will use main model qwen:7b-q4_K_M for embeddings.
     ) else (
-        echo   [OK] nomic-embed-text 下载完成
+        echo   [OK] nomic-embed-text downloaded
     )
 echo.
 
 REM ============================================================================
-REM  步骤 6: 初始化配置
+REM  Step 6: Initialize configuration
 REM ============================================================================
 echo ==============================================================
-echo   [6/6] 初始化配置
+echo   [6/6] Initializing configuration
 echo ==============================================================
 
 setx OLLAMA_NUM_PARALLEL 1 >nul 2>&1
@@ -224,42 +223,42 @@ for %%D in (
 )
 
 if not exist ".env" (
-    REM 使用 PowerShell 生成随机 16 位密码
+    REM Generate random 16-char password via PowerShell
     for /f "delims=" %%P in ('powershell -NoProfile -Command "-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 16 | %%{[char]$_})"') do set "RANDOM_PASS=%%P"
     (
-        echo # COMAC AI 配置文件
-        echo # 首次部署已自动生成随机密码
+        echo # COMAC AI Configuration
+        echo # Auto-generated on first deploy
         echo GRADIO_USER=admin
         echo GRADIO_PASS=!RANDOM_PASS!
         echo COMAC_MODEL=qwen:7b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
-        echo OLLAMA_HOST=localhost:11434
+        echo OLLAMA_HOST=127.0.0.1:11435
     ) > .env
-    echo   [OK] .env 已生成
-    echo   [重要] 初始密码: !RANDOM_PASS!（请妥善保存）
+    echo   [OK] .env generated
+    echo   [IMPORTANT] Initial password: !RANDOM_PASS! ^(save this^)
 ) else (
-    echo   [OK] .env 已存在
+    echo   [OK] .env already exists
 )
 
 REM ============================================================================
-REM  完成
+REM  Done
 REM ============================================================================
 echo.
 echo ==============================================================
-echo   有网初始化完成！
+echo   Online initialization complete!
 echo ==============================================================
 echo.
-echo   项目目录已包含完整运行环境：
-echo   - .venv\                  Python 虚拟环境（3.!PY_VER!)
-echo   - tools\ollama\          Ollama 可执行文件
-echo   - Ollama 模型缓存        qwen:7b-q4_K_M
+echo   The project directory now contains a complete runtime:
+echo   - .venv\                  Python virtual environment (3.!PY_VER!^)
+echo   - tools\ollama\          Ollama executable
+echo   - Ollama model cache     qwen:7b-q4_K_M
 echo.
-echo   下一步:
-echo   1. 修改 .env 中的 GRADIO_PASS 密码
-echo   2. 将整个项目目录复制到内网机器
-echo   3. 在内网机器上双击 setup.bat 验证
-echo   4. 双击 start.bat 启动服务
+echo   Next steps:
+echo   1. Edit GRADIO_PASS in .env
+echo   2. Copy the entire project directory to the air-gapped machine
+echo   3. On the air-gapped machine, run setup.bat to verify
+echo   4. Double-click start.bat to launch
 echo.
-echo   内网机器 Python 版本要求: Python 3.!PY_VER!（必须与本机一致）
+echo   Air-gapped machine Python version requirement: Python 3.!PY_VER! (must match^)
 echo.
 pause

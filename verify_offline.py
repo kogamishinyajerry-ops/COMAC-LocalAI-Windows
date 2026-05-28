@@ -15,12 +15,14 @@ def check_ollama():
         response = ollama.list()
         print(f"✅ Ollama 已连接")
 
-        # 处理不同的响应格式
-        models_data = response.get('models', []) or response.get('model_list', [])
+        # ollama.list() 返回 ListResponse，使用 .models 属性
+        models_data = getattr(response, 'models', []) or []
         model_names = []
         for m in models_data:
-            if isinstance(m, dict):
-                model_names.append(m.get('name', ''))
+            if hasattr(m, 'model'):
+                model_names.append(m.model)
+            elif isinstance(m, dict):
+                model_names.append(m.get('name', '') or m.get('model', ''))
             elif isinstance(m, str):
                 model_names.append(m)
 
@@ -30,12 +32,12 @@ def check_ollama():
             if model in model_names:
                 print(f"   ✅ {model} 已加载")
             else:
-                print(f"   ⚠️  {model} 未加载（需要运行 ollama pull 或 setup.sh）")
+                print(f"   ⚠️  {model} 未加载（请确认 ollama-models\\ 下有 GGUF 文件并运行 setup.bat）")
 
         return True
     except Exception as e:
         print(f"❌ Ollama 连接失败: {e}")
-        print("   请运行: ollama serve")
+        print("   请运行: install-offline.bat 或 setup.bat")
         return False
 
 def check_models():
@@ -225,15 +227,15 @@ def main():
     if all_ok:
         print("✅ 所有检查通过，可以断网测试")
         print("\n启动命令:")
-        print("   1. ollama serve")
-        print("   2. python app.py")
+        print("   1. 运行 install-offline.bat 或 setup.bat")
+        print("   2. 从 .venv\\Scripts\\python.exe app.py 启动")
         print("   3. 访问 http://localhost:7860")
     else:
         print("⚠️  部分检查异常，修复后再断网测试")
         print("\n常见问题解决:")
-        print("   - 模型未加载: cd ~/ollama-doc-models && bash setup.sh")
-        print("   - 依赖缺失: pip install -r requirements.txt")
-        print("   - Ollama未运行: ollama serve")
+        print("   - 模型未加载: 确保 ollama-models\\ 下有 GGUF 文件，运行 setup.bat")
+        print("   - 依赖缺失: 运行 install-offline.bat（离线）或 pip install -r requirements.txt（在线）")
+        print("   - Ollama未运行: 运行 setup.bat 或 start.bat")
     print("=" * 50)
 
     return 0 if all_ok else 1

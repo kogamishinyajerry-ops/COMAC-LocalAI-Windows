@@ -242,7 +242,6 @@ class ReportGenerator:
             <div class="row">
                 <span>📋 编制单位: {_h(report.author)}</span>
                 <span>📅 日期: {_h(report.date)}</span>
-                <span>🔒 密级: 内部</span>
             </div>
             {self._render_tags_html(report.tags)}
         </div>
@@ -322,7 +321,7 @@ class ReportGenerator:
             sub.runs[0].font.size = Pt(12)
 
         # 元信息
-        meta = doc.add_paragraph(f"编制: {report.author} | 日期: {report.date} | 密级: 内部")
+        meta = doc.add_paragraph(f"编制: {report.author} | 日期: {report.date}")
         meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
         for run in meta.runs:
             run.font.size = Pt(9)

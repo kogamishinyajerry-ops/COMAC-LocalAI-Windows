@@ -1,28 +1,10 @@
-# ============================================================================
-# COMAC-LocalAI-Windows - Ollama Modelfile
-# 模型: Qwen2.5-7B-Instruct Q4_K_M
-# 用途: 空气隔离内网部署
-# ============================================================================
-#
-# 使用方法（离线模式）:
-#   1. 下载 GGUF 文件到本目录，命名为 qwen2.5-7b-instruct-q4_k_m.gguf
-#      下载地址: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF
-#   2. 执行: ollama create qwen:7b-q4_K_M -f Modelfile
-#   3. 验证: ollama list | findstr qwen
-#
-# ============================================================================
+# COMAC-LocalAI-Windows Ollama Modelfile
+# Model: Qwen2.5-7B-Instruct Q4_K_M (~4.7GB)
+# Usage: ollama create qwen:7b-q4_K_M -f Modelfile
 
-# 基础模型（本地 GGUF 文件，请确保文件名与下方一致）
 FROM ./qwen2.5-7b-instruct-q4_k_m.gguf
 
-# 温度参数 - 国企文档需要稳定输出
 PARAMETER temperature 0.3
-
-# 上下文窗口 - 8192 tokens，适配 16GB RAM CPU 环境
 PARAMETER num_ctx 8192
-
-# 最大生成长度 - 2048 tokens
 PARAMETER num_predict 2048
-
-# 停止标记
 PARAMETER stop "<|im_end|>"
