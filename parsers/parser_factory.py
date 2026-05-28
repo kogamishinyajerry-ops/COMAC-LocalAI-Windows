@@ -9,13 +9,12 @@ from parsers.txt_parser import TextParser
 class ParserFactory:
     _parsers = {
         ".docx": WordParser(),
-        ".doc": WordParser(),
         ".pdf": PDFParser(),
         ".pptx": PPTParser(),
-        ".ppt": PPTParser(),
         ".xlsx": ExcelParser(),
-        ".xls": ExcelParser(),
+        ".csv": ExcelParser(),
         ".txt": TextParser(),
+        ".md": TextParser(),
     }
 
     @classmethod

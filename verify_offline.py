@@ -24,10 +24,10 @@ def check_ollama():
             elif isinstance(m, str):
                 model_names.append(m)
 
-        required = ['qwen-doc', 'qwen3-fast', 'deepseek-doc']
+        required = ['qwen:7b-q4_K_M']
 
         for model in required:
-            if any(model in name for name in model_names):
+            if model in model_names:
                 print(f"   ✅ {model} 已加载")
             else:
                 print(f"   ⚠️  {model} 未加载（需要运行 ollama pull 或 setup.sh）")
@@ -164,6 +164,36 @@ def check_ocr_tools():
 
     return True
 
+def check_ollama_models_env():
+    """检查 OLLAMA_MODELS 是否指向项目内目录"""
+    print("\n=== 8. OLLAMA_MODELS 环境变量检查 ===")
+    import os
+    ollama_models = os.environ.get("OLLAMA_MODELS", "")
+    if not ollama_models:
+        print("   ⚠️  OLLAMA_MODELS 环境变量未设置（默认使用 %APPDATA% 目录）")
+        return False
+    if "ollama-cache" in ollama_models:
+        print(f"   ✅ OLLAMA_MODELS = {ollama_models} (项目内)")
+        return True
+    print(f"   ⚠️  OLLAMA_MODELS = {ollama_models} (可能不是项目内目录)")
+    return False
+
+def check_libreoffice():
+    """检查 LibreOffice 是否可用"""
+    print("\n=== 9. LibreOffice 可用性检查 ===")
+    try:
+        from converters.converter_factory import ConverterFactory
+        converter = ConverterFactory()
+        if converter.libreoffice is not None:
+            print("   ✅ LibreOffice 可用")
+            return True
+        else:
+            print("   ⚠️  LibreOffice 不可用（PDF 转换功能受限）")
+            return False
+    except Exception as e:
+        print(f"   ⚠️  LibreOffice 检测失败: {e}")
+        return False
+
 def main():
     print("=" * 50)
     print("COMAC 离线AI平台 - 断网前验证")
@@ -178,6 +208,8 @@ def main():
     results.append(("依赖包", check_dependencies()))
     results.append(("目录结构", check_directories()))
     results.append(("OCR工具", check_ocr_tools()))
+    results.append(("OLLAMA_MODELS环境变量", check_ollama_models_env()))
+    results.append(("LibreOffice", check_libreoffice()))
 
     print("\n" + "=" * 50)
     print("验证结果汇总")

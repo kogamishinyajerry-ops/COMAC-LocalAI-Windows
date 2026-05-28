@@ -206,6 +206,8 @@ class OllamaRAG:
             self._embed_client = OllamaClient(self.llm_model)
             return False
         except Exception:
+            print(f"[RAG] Embedding model check failed, will use main model for embeddings.")
+            print(f"[RAG] Tip: run 'ollama pull nomic-embed-text' to install dedicated embedding model for better performance.")
             return False
 
     def _get_embedding(self, text: str) -> List[float]:

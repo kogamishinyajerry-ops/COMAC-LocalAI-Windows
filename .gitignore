@@ -76,6 +76,7 @@ htmlcov/
 # -----------------------------------------------------------------------------
 dist/
 build/
+offline_bundle/          # 离线部署包（由 build-offline-package.bat 生成）
 *.egg-info/
 *.whl                    # wheel 包
 

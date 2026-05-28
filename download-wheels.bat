@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul 2>&1
-setlocal
+setlocal enabledelayedexpansion
 
 REM ============================================================================
 REM  辅助工具：下载 Python wheel 包到 python-wheels\

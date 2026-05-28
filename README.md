@@ -65,6 +65,31 @@ setup.bat
 start.bat
 ```
 
+## 离线包一键部署（推荐）
+
+对于完全无网的内网 Windows 10 机器，推荐使用离线包方式：
+
+### 第一步：有网机器构建离线包
+
+1. 确保已安装 Python 3.11+
+2. 下载 `python-3.11.8-amd64.exe` 放入 `tools/` 目录
+3. 下载模型 GGUF 文件放入 `ollama-models/` 目录
+4. 双击运行 `build-offline-package.bat`
+5. 等待构建完成，得到 `offline_bundle/` 目录
+
+### 第二步：内网机器一键安装
+
+1. 将 `offline_bundle/` 整个目录复制到内网 Windows 10 机器
+2. 进入 `offline_bundle/`，双击运行 `install-offline.bat`（首次约 10-15 分钟）
+3. 安装完成后运行 `start.bat`
+4. 访问 http://localhost:7860
+
+### 安全说明
+
+- 首次部署自动生成随机 16 位管理员密码，请妥善保存
+- 默认仅绑定本地 (127.0.0.1)，如需局域网访问请在 `.env` 中设置 `GRADIO_SERVER_NAME=0.0.0.0`
+- 强制启用 Gradio 认证，未配置凭据时自动生成临时密码
+
 ## 目录结构
 
 ```

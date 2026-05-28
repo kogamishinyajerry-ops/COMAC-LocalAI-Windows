@@ -40,17 +40,32 @@ if not errorlevel 1 (
 )
 
 if not defined CHECK_PY (
-    echo   [错误] 未找到 Python 3.11+
-    echo.
-    echo   本项目需要 Python 3.11 或更高版本。
-    echo.
-    echo   请在有网机器下载安装：
-    echo   https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
-    echo.
-    echo   安装时请务必勾选: "Add Python to PATH"
-    echo.
-    pause
-    exit /b 1
+    REM 尝试使用内置 Python 安装包
+    if exist "%SCRIPT_DIR%tools\python-3.11.8-amd64.exe" (
+        echo         未找到系统 Python，使用内置安装包...
+        echo         安装到 %LOCALAPPDATA%\Programs\Python\Python311
+        "%SCRIPT_DIR%tools\python-3.11.8-amd64.exe" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0
+        if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
+            set "CHECK_PY=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+            echo   [OK] Python 3.11 已安装
+        ) else (
+            echo   [错误] Python 安装失败
+            pause
+            exit /b 1
+        )
+    ) else (
+        echo   [错误] 未找到 Python 3.11+
+        echo.
+        echo   本项目需要 Python 3.11 或更高版本。
+        echo.
+        echo   请在有网机器下载安装：
+        echo   https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe
+        echo.
+        echo   安装时请务必勾选: "Add Python to PATH"
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 REM 验证 .venv 的 Python 版本与系统 Python 一致
@@ -155,6 +170,7 @@ echo   [5/7] 启动 Ollama 服务
 echo ==============================================================
 
 set "OLLAMA_BIN=%SCRIPT_DIR%tools\ollama\ollama.exe"
+set "OLLAMA_MODELS=%SCRIPT_DIR%ollama-cache"
 
 REM 检查 Ollama 服务是否已运行
 curl -s --connect-timeout 3 "http://localhost:11434/api/version" >nul 2>&1
@@ -181,7 +197,7 @@ echo ==============================================================
 echo   [6/7] 检查 qwen 模型
 echo ==============================================================
 
-"%OLLAMA_BIN%" list 2>nul | findstr /I "qwen" >nul 2>&1
+"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
     echo   [OK] qwen 模型已就绪（Ollama 缓存）
 ) else (
@@ -224,29 +240,31 @@ setx OLLAMA_MAX_LOADED_MODELS 1 >nul 2>&1
 setx OLLAMA_KEEP_ALIVE 5m >nul 2>&1
 
 REM 创建运行时目录
-for %%d in (
+for %%D in (
     "temp\uploads"
     "temp\outputs"
     "temp\reports"
     "logs"
     "docs"
 ) do (
-    if not exist "%%~dd" mkdir "%%~dd" 2>nul
+    if not exist "%%~D" mkdir "%%~D" 2>nul
 )
 
 REM 生成 .env
 if not exist ".env" (
+    REM 使用 PowerShell 生成随机 16 位密码
+    for /f "delims=" %%P in ('powershell -NoProfile -Command "-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 16 | %%{[char]$_})"') do set "RANDOM_PASS=%%P"
     (
         echo # COMAC AI 配置文件
-        echo # 请修改以下密码为空闲内网使用
+        echo # 首次部署已自动生成随机密码
         echo GRADIO_USER=admin
-        echo GRADIO_PASS=change_me_123
+        echo GRADIO_PASS=!RANDOM_PASS!
         echo COMAC_MODEL=qwen:7b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
         echo OLLAMA_HOST=localhost:11434
     ) > .env
     echo   [OK] .env 已生成
-    echo   [重要] 请修改 .env 中的 GRADIO_PASS 密码！
+    echo   [重要] 初始密码: !RANDOM_PASS!（请妥善保存）
 ) else (
     echo   [OK] .env 已存在
 )

@@ -12,3 +12,9 @@ numpy>=1.24.0
 watchdog>=3.0.0
 lxml>=4.9.0
 XlsxWriter>=3.0.0
+
+# ============================================================================
+# 离线部署说明:
+#   requirements.lock.txt 由 build-offline-package.bat 通过 pip freeze 生成
+#   内网安装使用: pip install --no-index --find-links=python-wheels -r requirements.lock.txt
+# ============================================================================

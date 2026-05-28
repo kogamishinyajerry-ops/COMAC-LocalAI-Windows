@@ -39,6 +39,7 @@ except Exception:
 # 核心模块
 parser = ParserFactory()
 converter = ConverterFactory()
+LIBREOFFICE_AVAILABLE = converter.libreoffice is not None
 detector = SensitiveDetector()
 auditor = AIAuditor()
 template_engine = TemplateEngine()
@@ -71,18 +72,25 @@ try:
 except Exception:
     pass
 
-SUPPORTED_FORMATS = [".docx", ".doc", ".pdf", ".pptx", ".ppt", ".xlsx", ".xls", ".txt"]
+SUPPORTED_FORMATS = [".docx", ".pdf", ".pptx", ".xlsx", ".txt", ".md", ".csv"]
 
-# Gradio 简单认证配置（防止未授权访问）
+# Gradio 强制认证配置（防止未授权访问）
 # 使用环境变量 GRADIO_USER 和 GRADIO_PASS 设置凭据
-_GRADIO_USER = os.environ.get("GRADIO_USER", "")
-_GRADIO_PASS = os.environ.get("GRADIO_PASS", "")
+# 未设置时自动生成随机密码，确保安全
 
 def _gradio_auth():
-    """Gradio 认证回调"""
-    if not _GRADIO_USER or not _GRADIO_PASS:
-        return None  # 未设置凭据时禁用认证（仅供内网开发用）
-    return (_GRADIO_USER, _GRADIO_PASS)
+    """Gradio 认证回调 — 永不返回 None，强制认证"""
+    user = os.environ.get("GRADIO_USER", "").strip()
+    passwd = os.environ.get("GRADIO_PASS", "").strip()
+    if not user or not passwd:
+        import secrets
+        import string
+        alphabet = string.ascii_letters + string.digits + "!@#$%"
+        user = "admin"
+        passwd = ''.join(secrets.choice(alphabet) for _ in range(16))
+        print(f"  [WARN] 未配置认证凭据，已生成临时密码: {passwd}")
+        print(f"  请在 .env 中设置 GRADIO_USER 和 GRADIO_PASS")
+    return (user, passwd)
 
 
 # ============================================================================
@@ -461,8 +469,19 @@ def process_excel(file_obj, template_type="航空发动机经验教训"):
         return f"❌ 处理出错: {str(e)}"
 
 
-def rag_query(question, top_k=3):
+def rag_query(question, top_k=3, simple=False):
     """RAG 智能问答"""
+    if simple:
+        if not OLLAMA_AVAILABLE:
+            return "⚠️ Ollama 服务未连接，简答模式不可用"
+        try:
+            from ollama_client import OllamaClient, MODEL_DOC
+            client = OllamaClient(MODEL_DOC)
+            safe_question = _sanitize_user_input(question)
+            result = client.generate(f"请回答：{safe_question}", temperature=0.3)
+            return f"## 💡 简答\n\n{result}"
+        except Exception as e:
+            return f"❌ 简答失败: {str(e)[:200]}"
     if not question or not question.strip():
         return "💬 请输入问题"
     if not OLLAMA_AVAILABLE:
@@ -483,6 +502,24 @@ def rag_query(question, top_k=3):
         return f"⚠️ {str(e)}"
     except Exception as e:
         return f"❌ RAG 查询失败: {str(e)[:200]}"
+
+
+def index_docs():
+    """索引 docs/ 目录下的所有文档"""
+    try:
+        from ollama_rag import OllamaRAG
+        rag = OllamaRAG()
+        rag.index_documents("./docs")
+        stats = rag.get_stats()
+        return (
+            f"## ✅ 索引完成\n\n"
+            f"- **文档数**: {stats.get('total_documents', 0)}\n"
+            f"- **分块数**: {stats.get('total_chunks', 0)}\n"
+            f"- **向量存储**: {stats.get('vector_store_size', 'N/A')}\n\n"
+            f"现在可以切换到「智能问答」标签页进行 RAG 提问。"
+        )
+    except Exception as e:
+        return f"❌ 索引失败: {str(e)[:200]}"
 
 
 def multi_agent_process(task, agents_selected, context=""):
@@ -533,21 +570,73 @@ def multi_agent_process(task, agents_selected, context=""):
         return f"❌ Agent 执行失败: {str(e)[:200]}"
 
 
-def build_knowledge_graph(text_or_file, doc_id=""):
+def multi_agent_enhanced(task, agents_selected, context=""):
+    """多Agent协作处理（增强模式）"""
+    if not task or not task.strip():
+        return "🤖 请输入任务描述"
+    if not OLLAMA_AVAILABLE:
+        return "⚠️ Ollama 服务未连接，多Agent协作不可用"
+    try:
+        from enhanced_assistant import EnhancedCOMACAssistant, AgentRole
+
+        agent_map = {
+            "主编 (张明)": AgentRole.CHIEF_EDITOR,
+            "校审 (李华)": AgentRole.PROOFREADER,
+            "文档 (陈静)": AgentRole.DOCUMENT_AGENT,
+            "知识 (刘伟)": AgentRole.KNOWLEDGE_AGENT,
+            "可视化 (王芳)": AgentRole.VISUALIZATION,
+        }
+
+        selected_roles = [agent_map[a] for a in agents_selected if a in agent_map]
+        if not selected_roles:
+            selected_roles = [AgentRole.CHIEF_EDITOR]
+
+        safe_task = _sanitize_user_input(task)
+        safe_context = _sanitize_user_input(context)
+
+        assistant = EnhancedCOMACAssistant()
+        results = assistant.multi_agent_task(
+            task=safe_task,
+            agents=selected_roles,
+            context=safe_context,
+            use_harness=True
+        )
+
+        output = ["## ⚡ 增强模式 (Harness) 结果\n"]
+        for name, data in results.items():
+            role = data.get("role", "unknown")
+            elapsed = data.get("elapsed", "")
+            output.append(f"### {name} ({role})")
+            if "error" in data:
+                output.append(f"❌ {data['error']}")
+            else:
+                output.append(data.get("output", "无输出")[:500])
+            if elapsed:
+                output.append(f"*耗时: {elapsed}*")
+            output.append("")
+
+        return "\n".join(output)
+    except Exception as e:
+        return f"❌ 增强模式执行失败: {str(e)[:200]}"
+
+
+def build_knowledge_graph(text_input="", file_obj=None, doc_id=""):
     """构建知识图谱"""
-    if not text_or_file:
+    if not text_input and file_obj is None:
         return "🧠 请输入文本内容或上传文档"
 
     try:
         from knowledge_graph import KnowledgeGraphBuilder, KnowledgeGraphExporter
 
-        # 处理文件上传
-        content = text_or_file
-        if hasattr(text_or_file, 'name'):
-            file_path = save_file(text_or_file)
+        # 文件优先
+        content = text_input
+        if file_obj is not None:
+            file_path = save_file(file_obj)
             doc = parser.parse(file_path)
             content = doc.content
-            doc_id = text_or_file.name if hasattr(text_or_file, 'name') else "uploaded"
+            doc_id = file_obj.name if hasattr(file_obj, 'name') else "uploaded"
+        elif not text_input:
+            return "🧠 请输入文本内容或上传文档"
 
         builder = KnowledgeGraphBuilder()
         safe_content = _sanitize_user_input(content[:10000])
@@ -761,25 +850,38 @@ with gr.Blocks(
             with gr.Row():
                 with gr.Column(scale=1):
                     gr.Markdown("### 文档格式互转")
+                    gr.Markdown("⚠️ LibreOffice 未安装，PDF 转换功能不可用", visible=not LIBREOFFICE_AVAILABLE)
                     file_convert = gr.File(label="上传文档", file_count="single", file_types=SUPPORTED_FORMATS)
+                    _conv_choices = ["Word -> PDF", "Word -> TXT", "PDF -> TXT",
+                                    "PPT -> PDF", "Excel -> CSV", "Excel -> PDF"] if LIBREOFFICE_AVAILABLE else \
+                                   ["Word -> TXT", "PDF -> TXT", "Excel -> CSV"]
+                    _conv_default = "Word -> PDF" if LIBREOFFICE_AVAILABLE else "Word -> TXT"
                     conv_type = gr.Dropdown(
-                        choices=["Word -> PDF", "Word -> TXT", "PDF -> TXT",
-                                "PPT -> PDF", "Excel -> CSV", "Excel -> PDF"],
+                        choices=_conv_choices,
                         label="转换类型",
-                        value="Word -> PDF"
+                        value=_conv_default
                     )
                     btn_convert = gr.Button("开始转换", variant="primary")
                     out_convert = gr.Textbox(label="转换结果", lines=6)
 
                 with gr.Column(scale=1):
                     gr.Markdown("### 📋 支持的格式")
-                    gr.Markdown("""
+                    if LIBREOFFICE_AVAILABLE:
+                        gr.Markdown("""
                     | 源格式 | 目标格式 |
                     |--------|---------|
                     | DOCX | PDF, TXT |
                     | PDF | TXT |
                     | PPTX | PDF |
                     | XLSX | CSV, PDF |
+                    """)
+                    else:
+                        gr.Markdown("""
+                    | 源格式 | 目标格式 |
+                    |--------|---------|
+                    | DOCX | TXT |
+                    | PDF | TXT |
+                    | XLSX | CSV |
                     """)
 
             btn_convert.click(fn=convert_file, inputs=[file_convert, conv_type], outputs=out_convert)
@@ -830,6 +932,7 @@ with gr.Blocks(
                         rag_topk = gr.Slider(minimum=1, maximum=10, value=3, step=1, label="检索数量 (Top-K)")
                         rag_simple = gr.Checkbox(label="简答模式 (不使用RAG)", value=False)
                     btn_rag = gr.Button("🔍 提问", variant="primary")
+                    btn_index_docs = gr.Button("📚 索引 docs 目录", variant="secondary")
                     out_rag = gr.Textbox(label="回答", lines=15)
                 with gr.Column(scale=1):
                     gr.Markdown("### 📚 RAG 知识库")
@@ -839,7 +942,7 @@ with gr.Blocks(
                     2. 问题向量化 → 相似度搜索
                     3. Top-K 上下文 → LLM 生成回答
 
-                    **文档支持**: `.md`, `.txt`, `.pdf`
+                    **文档支持**: `.docx`, `.pdf`, `.pptx`, `.xlsx`, `.txt`, `.md`, `.csv`
 
                     **索引方式**:
                     ```python
@@ -849,7 +952,8 @@ with gr.Blocks(
                     ```
                     """)
 
-            btn_rag.click(fn=rag_query, inputs=[rag_question, rag_topk], outputs=out_rag)
+            btn_rag.click(fn=rag_query, inputs=[rag_question, rag_topk, rag_simple], outputs=out_rag)
+            btn_index_docs.click(fn=index_docs, outputs=out_rag)
 
         # ============================================================
         # Tab 5: 多Agent协作
@@ -892,6 +996,11 @@ with gr.Blocks(
                     """)
 
             btn_agent.click(fn=multi_agent_process, inputs=[agent_task, agent_select, agent_context], outputs=out_agent)
+            btn_agent_enhanced.click(
+                fn=multi_agent_enhanced,
+                inputs=[agent_task, agent_select, agent_context],
+                outputs=out_agent
+            )
 
         # ============================================================
         # Tab 6: 知识图谱
@@ -926,7 +1035,7 @@ with gr.Blocks(
                     - 原生 JSON
                     """)
 
-            btn_kg.click(fn=build_knowledge_graph, inputs=[kg_input], outputs=out_kg)
+            btn_kg.click(fn=build_knowledge_graph, inputs=[kg_input, kg_file], outputs=out_kg)
 
         # ============================================================
         # Tab 7: 报告生成
@@ -1110,8 +1219,9 @@ if __name__ == "__main__":
     print(f"  📅 启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
+    server_name = os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1")
     app.launch(
-        server_name="0.0.0.0",
+        server_name=server_name,
         server_port=7860,
         share=False,
         allowed_paths=["temp/", "templates/", "static/"],

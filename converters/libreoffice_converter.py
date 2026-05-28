@@ -3,8 +3,22 @@ from pathlib import Path
 from converters.base_converter import BaseConverter, ConversionResult
 
 class LibreOfficeConverter(BaseConverter):
-    def __init__(self, libreoffice_path="/usr/bin/soffice"):
-        self.libreoffice = libreoffice_path
+    def __init__(self, libreoffice_path=None):
+        if libreoffice_path is None:
+            candidates = [
+                Path("tools/LibreOfficePortable/App/libreoffice/program/soffice.exe"),
+                Path(r"C:\Program Files\LibreOffice\program\soffice.exe"),
+                Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"),
+            ]
+            found = [str(p) for p in candidates if p.exists()]
+            if not found:
+                raise FileNotFoundError(
+                    "LibreOffice not found. Expected paths:\n  " +
+                    "\n  ".join(str(p) for p in candidates)
+                )
+            self.libreoffice = found[0]
+        else:
+            self.libreoffice = libreoffice_path
 
     def convert(self, input_path: str, output_path: str) -> ConversionResult:
         try:

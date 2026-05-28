@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul 2>&1
-setlocal
+setlocal enabledelayedexpansion
 
 REM ============================================================================
 REM  COMAC-LocalAI-Windows 启动脚本（内网一键部署版）
@@ -34,14 +34,14 @@ if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
 )
 echo         [OK] .venv 存在
 
-for %%d in (
+for %%D in (
     "temp\uploads"
     "temp\outputs"
     "temp\reports"
     "logs"
     "docs"
 ) do (
-    if not exist "%%~dd" mkdir "%%~dd" 2>nul
+    if not exist "%%~D" mkdir "%%~D" 2>nul
 )
 echo         [OK] 目录就绪
 echo.
@@ -52,6 +52,7 @@ REM ============================================================================
 echo [1/4] 检查 Ollama 服务...
 
 set "OLLAMA_HOST=localhost:11434"
+set "OLLAMA_MODELS=%SCRIPT_DIR%ollama-cache"
 set "OLLAMA_BIN=tools\ollama\ollama.exe"
 
 REM 优先使用内置 Ollama，否则尝试系统 PATH
@@ -97,7 +98,7 @@ REM ============================================================================
 echo [2/4] 验证模型 (qwen:7b-q4_K_M)...
 
 REM 尝试匹配 qwen 相关模型
-%OLLAMA_CMD% list 2>nul | findstr /I "qwen" >nul
+%OLLAMA_CMD% list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul
 if errorlevel 1 (
     echo.
     echo   [错误] qwen 模型未找到
@@ -114,15 +115,14 @@ REM ============================================================================
 echo [3/4] 检查访问认证...
 
 if exist ".env" (
-    for /f "usebackq eol=# tokens=1,* delims==" %%a in (.env) do (
-        if "%%a"=="GRADIO_USER" set "GRADIO_USER=%%b"
-        if "%%a"=="GRADIO_PASS" set "GRADIO_PASS=%%b"
+    for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env") do (
+        if not "%%A"=="" set "%%A=%%B"
     )
 )
 
 if defined GRADIO_USER if defined GRADIO_PASS (
     echo         [OK] 认证已配置 (用户: %GRADIO_USER%)
-    if "!GRADIO_PASS!"=="change_me_123" (
+    if "%GRADIO_PASS%"=="change_me_123" (
         echo         [警告] 密码仍为默认值，请修改 .env 中的 GRADIO_PASS
     )
 ) else (
@@ -141,11 +141,18 @@ set "OLLAMA_NUM_PARALLEL=1"
 set "OLLAMA_MAX_LOADED_MODELS=1"
 set "OLLAMA_KEEP_ALIVE=5m"
 
-REM 清理 7860 端口旧进程
+REM 清理 7860 端口旧进程（仅终止 Python 进程，避免误杀）
+set "PORT_PID="
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":7860.*LISTENING"') do (
-    taskkill /PID %%a /F >nul 2>&1
+    set "PORT_PID=%%a"
 )
-timeout /t 1 /nobreak >nul
+if defined PORT_PID (
+    for /f "tokens=1" %%n in ('tasklist /FI "PID eq !PORT_PID!" /FO CSV /NH 2^>nul ^| findstr /I "python"') do (
+        echo         端口 7860 被 Python 进程（PID=!PORT_PID!）占用，正在终止...
+        taskkill /PID !PORT_PID! /F >nul 2>&1
+        timeout /t 1 /nobreak >nul
+    )
+)
 
 REM 启动应用
 echo         启动中（首次运行可能需要 10-20 秒）...

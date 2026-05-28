@@ -5,7 +5,10 @@ from converters.native_converter import NativeConverter
 
 class ConverterFactory:
     def __init__(self):
-        self.libreoffice = LibreOfficeConverter()
+        try:
+            self.libreoffice = LibreOfficeConverter()
+        except FileNotFoundError:
+            self.libreoffice = None
         self.native = NativeConverter()
 
     def convert(self, input_path: str, output_path: str) -> ConversionResult:
@@ -22,6 +25,8 @@ class ConverterFactory:
         }
 
         if (input_ext, output_ext) in lo_conversions:
+            if self.libreoffice is None:
+                return ConversionResult(success=False, error="LibreOffice not available for PDF conversion")
             return self.libreoffice.convert(input_path, output_path)
 
         if input_ext == ".docx" and output_ext == ".txt":
@@ -34,7 +39,8 @@ class ConverterFactory:
         return ConversionResult(success=False, error=f"Conversion {input_ext} -> {output_ext} not supported")
 
     def get_supported_formats(self) -> dict:
+        lo_formats = [".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"] if self.libreoffice is not None else []
         return {
-            "libreoffice": [".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"],
+            "libreoffice": lo_formats,
             "native": [".docx", ".pdf", ".xlsx", ".xls"]
         }

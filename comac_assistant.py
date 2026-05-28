@@ -195,7 +195,7 @@ class COMACAssistant:
             t.join(timeout=timeout)
 
             # 检查是否超时
-            if t.is_alive() and agent.name not in results:
+            if t.is_alive() and AGENTS[role].name not in results:
                 results[AGENTS[role].name] = {
                     "role": role.value,
                     "error": f"Timeout after {timeout}s"

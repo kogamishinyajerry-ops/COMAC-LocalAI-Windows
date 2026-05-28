@@ -1,0 +1,59 @@
+sequenceDiagram
+    actor User
+    participant UI as Gradio App
+    participant RAG as OllamaRAG
+    participant VS as SimpleVectorStore
+    participant OC as OllamaClient
+
+    Note over User,OC: === P1-7: RAG 一键索引 ===
+
+    User->>UI: 点击 "📚 索引 docs 目录"
+    UI->>RAG: OllamaRAG()
+    RAG->>RAG: _check_embed_model()
+    UI->>RAG: index_documents("./docs")
+    RAG->>RAG: 遍历 docs/ (*.md, *.txt, *.pdf)
+    loop 每个文件
+        RAG->>RAG: _chunk_text(content)
+        RAG->>RAG: _get_embedding(chunk)
+        RAG->>VS: add_chunk(chunk, doc_id)
+    end
+    RAG->>VS: _save_index()
+    RAG-->>UI: chunk_count
+    UI->>RAG: get_stats()
+    RAG-->>UI: {total_documents, total_chunks}
+    UI-->>User: "✅ 索引完成"
+
+    Note over User,OC: === P1-7: RAG 简答模式 ===
+
+    User->>UI: 勾选"简答模式" + 提问
+    UI->>UI: rag_query(q, top_k, simple=True)
+    UI->>OC: OllamaClient(MODEL_DOC)
+    OC->>OC: generate("请回答：{q}", temp=0.3)
+    OC-->>UI: answer
+    UI-->>User: 回答内容
+
+    Note over User,OC: === P1-10: 知识图谱文件上传 ===
+
+    User->>UI: 上传文档 + 点击构建图谱
+    UI->>UI: build_knowledge_graph(text_input, file_obj)
+    UI->>UI: save_file(file_obj)
+    UI->>UI: parser.parse(file_path)
+    UI->>UI: doc.content
+    UI->>UI: KnowledgeGraphBuilder.extract_from_text()
+    UI-->>User: 图谱结果（实体+关系+Mermaid）
+
+    Note over User,OC: === P1-11: 增强模式 Agent ===
+
+    User->>UI: 点击 "⚡ 增强模式 (Harness)"
+    UI->>UI: multi_agent_enhanced(task, agents, context)
+    UI->>UI: EnhancedCOMACAssistant()
+    UI->>UI: harness = AdvancedHarness(config)
+
+    loop 每个选中的 Agent
+        UI->>UI: _build_agent_prompt(agent, task, context)
+        UI->>UI: harness.execute_with_harness(task, llm_call, context)
+        UI->>OC: llm_call(prompt) [Self-Correction]
+        OC-->>UI: generated text
+    end
+
+    UI-->>User: 格式化的多 Agent 输出 [增强模式]

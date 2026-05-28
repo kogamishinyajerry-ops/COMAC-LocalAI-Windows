@@ -134,6 +134,7 @@ echo   [4/6] 启动 Ollama 服务
 echo ==============================================================
 
 set "OLLAMA_BIN=%SCRIPT_DIR%tools\ollama\ollama.exe"
+set "OLLAMA_MODELS=%SCRIPT_DIR%ollama-cache"
 
 curl -s --connect-timeout 5 "http://localhost:11434/api/version" >nul 2>&1
 if not errorlevel 1 (
@@ -159,7 +160,7 @@ echo ==============================================================
 echo   [5/6] 下载 qwen:7b-q4_K_M 模型（约 4.5 GB）
 echo ==============================================================
 
-"%OLLAMA_BIN%" list 2>nul | findstr /I "qwen" >nul 2>&1
+"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
     echo   [OK] qwen 模型已在 Ollama 缓存中
 ) else (
@@ -189,6 +190,16 @@ if not errorlevel 1 (
         echo   [OK] qwen:7b-q4_K_M 模型下载成功
     )
 )
+    
+    REM 尝试下载 embedding 模型（可选，失败不阻断）
+    echo         下载 embedding 模型（可选）...
+    "%OLLAMA_BIN%" pull nomic-embed-text 2>nul
+    if errorlevel 1 (
+        echo   [提示] embedding 模型 nomic-embed-text 下载失败
+        echo          RAG 将使用主模型 qwen:7b-q4_K_M 生成向量
+    ) else (
+        echo   [OK] nomic-embed-text 下载完成
+    )
 echo.
 
 REM ============================================================================
@@ -202,27 +213,30 @@ setx OLLAMA_NUM_PARALLEL 1 >nul 2>&1
 setx OLLAMA_MAX_LOADED_MODELS 1 >nul 2>&1
 setx OLLAMA_KEEP_ALIVE 5m >nul 2>&1
 
-for %%d in (
+for %%D in (
     "temp\uploads"
     "temp\outputs"
     "temp\reports"
     "logs"
     "docs"
 ) do (
-    if not exist "%%~dd" mkdir "%%~dd" 2>nul
+    if not exist "%%~D" mkdir "%%~D" 2>nul
 )
 
 if not exist ".env" (
+    REM 使用 PowerShell 生成随机 16 位密码
+    for /f "delims=" %%P in ('powershell -NoProfile -Command "-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 16 | %%{[char]$_})"') do set "RANDOM_PASS=%%P"
     (
         echo # COMAC AI 配置文件
+        echo # 首次部署已自动生成随机密码
         echo GRADIO_USER=admin
-        echo GRADIO_PASS=change_me_123
+        echo GRADIO_PASS=!RANDOM_PASS!
         echo COMAC_MODEL=qwen:7b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
         echo OLLAMA_HOST=localhost:11434
     ) > .env
     echo   [OK] .env 已生成
-    echo   [重要] 请修改 .env 中的 GRADIO_PASS 密码！
+    echo   [重要] 初始密码: !RANDOM_PASS!（请妥善保存）
 ) else (
     echo   [OK] .env 已存在
 )
