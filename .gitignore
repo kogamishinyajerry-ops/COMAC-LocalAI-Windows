@@ -89,9 +89,11 @@ python-wheels/          # 依赖包缓存（运行 download-wheels.bat 重新生
 tools/pip-wheels/*.whl  # pip 自身 wheel（重新下载即可）
 
 # -----------------------------------------------------------------------------
-# 部署传输包（构建/传输产物，不纳入版本控制）
+# 部署传输包（大部分不纳入版本控制）
 # -----------------------------------------------------------------------------
-*.zip                              # 所有 zip 包
+*.zip                              # 所有 zip 包（默认排除）
+!COMAC-offline-sources.zip         # 离线部署源码包（保留在仓库）
+!COMAC-python-wheels.zip           # Python 离线依赖包（保留在仓库）
 installer/                         # NSIS 安装程序构建产物
 python-wheels-new/                 # wheels 测试目录
 ollama-cache/                      # Ollama 本地模型缓存
@@ -102,8 +104,6 @@ vector_index/                      # RAG 向量索引缓存
 _fix_curl.py                       # 一次性修复脚本
 get-pip.py                         # pip 引导脚本
 *.gguf                             # 测试 GGUF 文件
-merge_gguf_v*.py                   # 迭代合并脚本（仅保留 merge_official.py）
-merge_gguf.py                      # 旧版合并脚本
 merge_gguf.zip                     # 合并脚本传输包
 hf_xet-only.zip                    # 单文件传输包
 COMAC-source-package.zip           # 构建产物
