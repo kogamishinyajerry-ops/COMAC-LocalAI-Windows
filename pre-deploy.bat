@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 REM ============================================================================
 REM  COMAC-LocalAI-Windows - Internet Machine Initialization
-REM  Model: qwen:7b-q4_K_M
+REM  Model: qwen3:4b-q4_K_M
 REM
 REM  Usage: Run once on an internet-connected machine for full setup.
 REM  After completion, copy the entire project directory to the air-gapped machine.
@@ -153,32 +153,32 @@ echo   [OK] Ollama service ready
 echo.
 
 REM ============================================================================
-REM  Step 5: Download qwen:7b-q4_K_M model
+REM  Step 5: Download qwen3:4b-q4_K_M model
 REM ============================================================================
 echo ==============================================================
-echo   [5/6] Downloading qwen:7b-q4_K_M model (~4.5 GB^)
+echo   [5/6] Downloading qwen3:4b-q4_K_M model (~2.5 GB^)
 echo ==============================================================
 
-"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
+"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen3:4b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] qwen model already in Ollama cache
+    echo   [OK] qwen3 model already in Ollama cache
 ) else (
     if exist "%SCRIPT_DIR%ollama-models\*.gguf" (
         echo         Local GGUF file found, creating model...
         if exist "%SCRIPT_DIR%ollama-models\Modelfile" (
-            "%OLLAMA_BIN%" create qwen:7b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
+            "%OLLAMA_BIN%" create qwen3:4b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
             if errorlevel 1 (
                 echo   [ERROR] Model creation failed
                 pause
                 exit /b 1
             )
-            echo   [OK] qwen:7b-q4_K_M model created
+            echo   [OK] qwen3:4b-q4_K_M model created
         )
     ) else (
-        echo         Downloading from Ollama registry (~4.5 GB^)
+        echo         Downloading from Ollama registry (~2.5 GB^)
         echo         This will take a while, please do not close this window.
         echo.
-        "%OLLAMA_BIN%" pull qwen:7b-q4_K_M
+        "%OLLAMA_BIN%" pull qwen3:4b-q4_K_M
         if errorlevel 1 (
             echo.
             echo   [ERROR] Model download failed
@@ -186,7 +186,7 @@ if not errorlevel 1 (
             pause
             exit /b 1
         )
-        echo   [OK] qwen:7b-q4_K_M model downloaded
+        echo   [OK] qwen3:4b-q4_K_M model downloaded
     )
 )
     
@@ -195,7 +195,7 @@ if not errorlevel 1 (
     "%OLLAMA_BIN%" pull nomic-embed-text 2>nul
     if errorlevel 1 (
         echo   [INFO] Embedding model nomic-embed-text download failed
-        echo         RAG will use main model qwen:7b-q4_K_M for embeddings.
+        echo         RAG will use main model qwen3:4b-q4_K_M for embeddings.
     ) else (
         echo   [OK] nomic-embed-text downloaded
     )
@@ -230,7 +230,7 @@ if not exist ".env" (
         echo # Auto-generated on first deploy
         echo GRADIO_USER=admin
         echo GRADIO_PASS=!RANDOM_PASS!
-        echo COMAC_MODEL=qwen:7b-q4_K_M
+        echo COMAC_MODEL=qwen3:4b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
         echo OLLAMA_HOST=127.0.0.1:11435
     ) > .env
@@ -251,7 +251,7 @@ echo.
 echo   The project directory now contains a complete runtime:
 echo   - .venv\                  Python virtual environment (3.!PY_VER!^)
 echo   - tools\ollama\          Ollama executable
-echo   - Ollama model cache     qwen:7b-q4_K_M
+echo   - Ollama model cache     qwen3:4b-q4_K_M
 echo.
 echo   Next steps:
 echo   1. Edit GRADIO_PASS in .env

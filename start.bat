@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 REM ============================================================================
 REM  COMAC-LocalAI-Windows - Startup Script
-REM  Model: qwen:7b-q4_K_M
+REM  Model: qwen3:4b-q4_K_M
 REM  Environment: Windows 10 x64, 16GB RAM, air-gapped
 REM ============================================================================
 
@@ -96,19 +96,19 @@ echo         [OK] Ollama service running
 echo.
 
 REM ============================================================================
-REM  2. Verify qwen:7b-q4_K_M model
+REM  2. Verify qwen3:4b-q4_K_M model
 REM ============================================================================
-echo [2/4] Verifying model (qwen:7b-q4_K_M^)...
+echo [2/4] Verifying model (qwen3:4b-q4_K_M^)...
 
-%OLLAMA_CMD% list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul
+%OLLAMA_CMD% list 2>nul | findstr /C:"qwen3:4b-q4_K_M" >nul
 if errorlevel 1 (
     echo.
-    echo   [ERROR] qwen model not found
+    echo   [ERROR] qwen3 model not found
     echo   Please run setup.bat to initialize the model
     pause
     exit /b 1
 )
-echo         [OK] qwen model ready
+echo         [OK] qwen3 model ready
 echo.
 
 REM ============================================================================

@@ -500,7 +500,7 @@ sequenceDiagram
 - Ollama 连接状态通过全局变量 OLLAMA_AVAILABLE 和 OLLAMA_VALID 控制
 - 用户输入经过 _sanitize_user_input() 进行 Prompt 注入过滤后才传入 LLM
 - 文件上传通过 save_file() 统一处理（路径清理 + 白名单扩展名验证）
-- MODEL_DOC = qwen:7b-q4_K_M，MODEL_EMBED = nomic-embed-text（来自 config.py）
+- MODEL_DOC = qwen3:4b-q4_K_M，MODEL_EMBED = nomic-embed-text（来自 config.py）
 - enhanced_assistant.py 定义了自己的 AgentRole 枚举（与 comac_assistant.py 中的同名但独立）
 - EnhancedCOMACAssistant.multi_agent_task() 不返回 elapsed 时间字段
 - pre-deploy.bat 中 embedding 模型下载为"非阻断"——失败只打印提示不中断

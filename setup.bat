@@ -8,7 +8,7 @@ REM  Purpose:
 REM    - Air-gapped machine: verify all components ready, start services
 REM    - Internet machine (first run): run pre-deploy.bat for full init
 REM
-REM  Model: qwen:7b-q4_K_M | Python 3.11+ | Windows 10+
+REM  Model: qwen3:4b-q4_K_M | Python 3.11+ | Windows 10+
 REM ============================================================================
 
 title COMAC AI - Deployment Initialization
@@ -214,26 +214,26 @@ echo   [OK] Ollama service ready
 echo.
 
 REM ============================================================================
-REM  Step 6: Check qwen:7b-q4_K_M model
+REM  Step 6: Check qwen3:4b-q4_K_M model
 REM ============================================================================
 echo ==============================================================
-echo   [6/7] Checking qwen model
+echo   [6/7] Checking qwen3 model
 echo ==============================================================
 
-"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
+"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen3:4b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] qwen model ready (Ollama cache^)
+    echo   [OK] qwen3 model ready (Ollama cache^)
 ) else (
     if exist "%SCRIPT_DIR%ollama-models\*.gguf" (
         echo         Local GGUF file found, creating model via Modelfile...
         if exist "%SCRIPT_DIR%ollama-models\Modelfile" (
-            "%OLLAMA_BIN%" create qwen:7b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
+            "%OLLAMA_BIN%" create qwen3:4b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
             if errorlevel 1 (
                 echo   [ERROR] Model creation failed
                 pause
                 exit /b 1
             )
-            echo   [OK] qwen:7b-q4_K_M model created
+            echo   [OK] qwen3:4b-q4_K_M model created
         ) else (
             echo   [ERROR] Modelfile missing
             pause
@@ -243,7 +243,7 @@ if not errorlevel 1 (
         echo   [ERROR] No GGUF model file found
         echo.
         echo   Run pre-deploy.bat on an internet machine to download the model,
-        echo   or place qwen2.5-7b-instruct-q4_k_m.gguf in ollama-models\
+        echo   or place qwen3-4b-instruct-q4_k_m.gguf in ollama-models\
         pause
         exit /b 1
     )
@@ -282,7 +282,7 @@ if not exist ".env" (
         echo # Auto-generated on first deploy
         echo GRADIO_USER=admin
         echo GRADIO_PASS=!RANDOM_PASS!
-        echo COMAC_MODEL=qwen:7b-q4_K_M
+        echo COMAC_MODEL=qwen3:4b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
         echo OLLAMA_HOST=127.0.0.1:11435
     ) > .env
@@ -308,7 +308,7 @@ echo   Component status:
 echo   - Python: !CHECK_PY_VER!  ^(system^)
 echo   - .venv:  ready
 echo   - Ollama: tools\ollama\ollama.exe
-echo   - Model:  qwen:7b-q4_K_M
+echo   - Model:  qwen3:4b-q4_K_M
 echo   - Auth:   admin / ^(edit .env to change^)
 echo.
 pause

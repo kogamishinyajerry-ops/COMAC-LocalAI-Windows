@@ -90,9 +90,9 @@ if not exist "tools\python-3.11.8-amd64.exe" (
 
 :: Download model
 echo.
-echo [4/4] Download LLM Model (~4-5GB, optional)...
-echo Visit: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/tree/main
-echo Download: qwen2.5-7b-instruct-q4_k_m.gguf (~4.4GB)
+echo [4/4] Download LLM Model (~2.5GB, optional)...
+echo Visit: https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF
+echo Download: qwen3-4b-instruct-q4_k_m.gguf (~2.5GB)
 echo Save to: %CD%\ollama-models\
 echo.
 echo Press Enter to open download page (or type N to skip)...
@@ -100,7 +100,7 @@ pause >nul
 set "choice="
 set /p choice="Open download page? (Y/N): "
 if /i "%choice%"=="Y" (
-    start https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/tree/main
+    start https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF
 )
 
 :: Done

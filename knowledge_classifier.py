@@ -188,7 +188,7 @@ class KnowledgeClassifier:
 标签："""
 
         try:
-            response = self._client.generate(prompt, temperature=0.3)
+            response = self._client.generate(prompt)
             # 解析标签
             tags = [t.strip() for t in response.split(',') if t.strip()]
             self._tag_cache[cache_key] = tags
@@ -301,7 +301,7 @@ class KnowledgeOrganizer:
 
         try:
             client = OllamaClient(MODEL_DOC)
-            return client.generate(prompt, temperature=0.3).strip()
+            return client.generate(prompt).strip()
         except Exception:
             return content[:max_length] + "..."
 

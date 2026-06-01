@@ -129,7 +129,7 @@ class EnhancedCOMACAssistant:
             return self._query_with_harness(question)
         elif mode == "simple":
             client = self._get_client(self.model)
-            return client.generate(f"请回答：{question}", temperature=0.3)
+            return client.generate(f"请回答：{question}")
         else:
             return self.rag.query(question)
 
@@ -138,7 +138,7 @@ class EnhancedCOMACAssistant:
         client = self._get_client(self.model)
 
         def llm_call(prompt):
-            return client.generate(prompt, temperature=0.3)
+            return client.generate(prompt)
 
         result = self.harness.execute_with_harness(
             task=f"回答问题：{question}",
@@ -153,7 +153,7 @@ class EnhancedCOMACAssistant:
         client = self._get_client(self.model)
 
         def llm_call(prompt):
-            return client.generate(prompt, temperature=0.3)
+            return client.generate(prompt)
 
         cot_result = self._cot.think(
             problem=f"回答问题：{question}",
@@ -198,7 +198,7 @@ class EnhancedCOMACAssistant:
 
             if use_harness and self.enable_harness:
                 def llm_call(p):
-                    return client.generate(p, temperature=0.3)
+                    return client.generate(p)
 
                 result = self.harness.execute_with_harness(
                     task=task,

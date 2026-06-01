@@ -235,7 +235,7 @@ def save_file(file_obj):
 def get_ollama_status():
     """获取 Ollama 连接状态"""
     if not OLLAMA_AVAILABLE:
-        return "⚠️ Ollama 未连接 - 请先启动 Ollama 服务并加载 qwen:7b-q4_K_M 模型"
+        return "⚠️ Ollama 未连接 - 请先启动 Ollama 服务并加载 qwen3:4b-q4_K_M 模型"
     try:
         from ollama_client import OllamaClient, MODEL_DOC
         client = OllamaClient(MODEL_DOC)
@@ -291,7 +291,7 @@ def summarize(file_obj, mode="标准摘要"):
             "一句话总结": f"请用一句话（50字以内）总结以下文档的核心内容：\n\n{_sanitize_user_input(content)}",
         }
         prompt = prompts.get(mode, prompts["标准摘要"])
-        summary = client.generate(prompt, temperature=0.3)
+        summary = client.generate(prompt)
         return f"## 📋 {mode}结果\n\n{summary}"
     except ConnectionError:
         return "⚠️ 无法连接 Ollama 服务，请确保 ollama serve 正在运行"
@@ -321,7 +321,7 @@ def polish_text(input_text, style="正式公文"):
             "汇报材料": f"请将以下文字润色为国企汇报材料风格，语言简洁有力：\n\n{safe_input}",
         }
         prompt = prompts.get(style, prompts["正式公文"])
-        return client.generate(prompt, temperature=0.3)
+        return client.generate(prompt)
     except RuntimeError as e:
         return f"⚠️ {str(e)}"
     except Exception as e:
@@ -478,7 +478,7 @@ def rag_query(question, top_k=3, simple=False):
             from ollama_client import OllamaClient, MODEL_DOC
             client = OllamaClient(MODEL_DOC)
             safe_question = _sanitize_user_input(question)
-            result = client.generate(f"请回答：{safe_question}", temperature=0.3)
+            result = client.generate(f"请回答：{safe_question}")
             return f"## 💡 简答\n\n{result}"
         except Exception as e:
             return f"❌ 简答失败: {str(e)[:200]}"
@@ -794,7 +794,7 @@ with gr.Blocks(
             🏭 COMAC AI 文档处理平台
         </h1>
         <p style="margin: 8px 0 0; opacity: 0.85; font-size: 14px;">
-            Windows 精简专业版 | Qwen2.5-7B 本地推理 | 纯离线·安全可靠
+            Windows 精简专业版 | Qwen3-4B 本地推理 | 纯离线·安全可靠
         </p>
     </div>
     """)
@@ -1181,7 +1181,7 @@ with gr.Blocks(
 
             | 组件 | 技术 |
             |------|------|
-            | AI 模型 | Qwen2.5-7B-Instruct (Q4_K_M) |
+            | AI 模型 | Qwen3-4B-Instruct (Q4_K_M) |
             | 推理引擎 | Ollama (本地 CPU) |
             | Web UI | Gradio 6.x |
             | 文档处理 | python-docx, python-pptx, openpyxl |
@@ -1192,11 +1192,11 @@ with gr.Blocks(
 
             | 指标 | 数值 |
             |------|------|
-            | 推理速度 | 8-12 tokens/s |
-            | 首字延迟 | 3-5 秒 |
-            | 内存占用 | ~8-9 GB |
-            | 模型大小 | 4.7 GB |
-            | 上下文窗口 | 8192 tokens |
+| 推理速度 | 10-18 tokens/s (GPU) / 3-8 tokens/s (CPU) |
+| 首字延迟 | 2-4 秒 (GPU) / 15-30 秒 (CPU) |
+| 内存占用 | ~5-6 GB |
+| 模型大小 | 2.5 GB |
+| 上下文窗口 | 32,768 tokens |
 
             ---
             *COMAC AI 文档处理平台 v2.0*

@@ -5,14 +5,14 @@
 import struct, os, glob
 
 def find_shards():
-    pattern = "ollama-models/qwen2.5-7b-instruct-q4_k_m-*-of-*.gguf"
+    pattern = "ollama-models/qwen3-4b-instruct-q4_k_m-*-of-*.gguf"
     files = sorted(glob.glob(pattern))
     if len(files) < 2:
-        pattern2 = "qwen2.5-7b-instruct-q4_k_m-*-of-*.gguf"
+        pattern2 = "qwen3-4b-instruct-q4_k_m-*-of-*.gguf"
         files = sorted(glob.glob(pattern2))
     if len(files) < 2:
         print("ERROR: Could not find sharded GGUF files")
-        print("Expected: qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf and -00002-of-00002.gguf")
+        print("Expected: qwen3-4b-instruct-q4_k_m-00001-of-00002.gguf and -00002-of-00002.gguf")
         exit(1)
     return files
 

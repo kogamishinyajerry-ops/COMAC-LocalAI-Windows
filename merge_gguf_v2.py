@@ -43,8 +43,8 @@ def parse_gguf_header(data):
 
 def find_shards():
     patterns = [
-        "ollama-models/qwen2.5-7b-instruct-q4_k_m-*-of-*.gguf",
-        "qwen2.5-7b-instruct-q4_k_m-*-of-*.gguf",
+        "ollama-models/qwen3-4b-instruct-q4_k_m-*-of-*.gguf",
+        "qwen3-4b-instruct-q4_k_m-*-of-*.gguf",
     ]
     for p in patterns:
         files = sorted(glob.glob(p))

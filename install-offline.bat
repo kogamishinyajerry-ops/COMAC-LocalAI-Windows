@@ -23,7 +23,7 @@ echo   Estimated time: 10-15 minutes (depends on disk speed^)
 echo.
 
 REM =============================================================================
-REM Step 1: Check / Install Python 3.11
+REM Step 1: Check / Install Python 3.11+
 REM =============================================================================
 echo ==============================================================
 echo   [1/8] Checking Python environment
@@ -45,32 +45,40 @@ if not errorlevel 1 (
     )
 )
 
-REM No system Python 3.11+, use built-in installer
-if not exist "%SCRIPT_DIR%tools\python-3.11.8-amd64.exe" (
-    echo   [ERROR] tools\python-3.11.8-amd64.exe not found
+REM No system Python 3.11+, try bundled installer (3.11 or 3.12)
+set "PY_INSTALLER="
+for %%f in ("%SCRIPT_DIR%tools\python-3.1*-amd64.exe") do (
+    if exist "%%f" set "PY_INSTALLER=%%f"
+)
+
+if not defined PY_INSTALLER (
+    echo   [ERROR] No Python found and no installer in tools\
     echo.
-    echo   The offline bundle is missing the Python installer.
-    echo   Please rebuild the offline package with build-offline-package.bat
-    echo   on an internet-connected machine.
+    echo   Please install Python 3.11+ manually:
+    echo   https://www.python.org/downloads/
     echo.
     pause
     exit /b 1
 )
 
-echo         Installing Python 3.11.8 (silent, ~1-2 min^)...
-echo         Path: %LOCALAPPDATA%\Programs\Python\Python311
-"%SCRIPT_DIR%tools\python-3.11.8-amd64.exe" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0
+echo         Installing Python from bundled installer...
+echo         File: %PY_INSTALLER%
+"%PY_INSTALLER%" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0
 
-if not exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
-    echo   [ERROR] Python installation failed.
-    echo          Check disk space and permissions, or install Python 3.11+ manually.
-    pause
-    exit /b 1
+REM Try to locate the installed Python
+for %%v in (312 311) do (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python%%v\python.exe" (
+        set "PYTHON_EXE=%LOCALAPPDATA%\Programs\Python\Python%%v\python.exe"
+        for /f "delims=" %%V in ('"%PYTHON_EXE%" -c "import sys; print(sys.version_info[1])" 2^>nul') do set "PYTHON_VER=%%V"
+        echo   [OK] Python 3.!PYTHON_VER! installed
+        goto :venv_create
+    )
 )
 
-set "PYTHON_EXE=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
-for /f "delims=" %%v in ('"%PYTHON_EXE%" -c "import sys; print(sys.version_info[1])" 2^>nul') do set "PYTHON_VER=%%v"
-echo   [OK] Python 3.!PYTHON_VER! installed
+echo   [ERROR] Python installation failed.
+echo          Install Python 3.11+ manually and re-run this script.
+pause
+exit /b 1
 
 :venv_create
 
@@ -253,15 +261,15 @@ echo   [OK] Ollama service ready (port 11435^)
 echo.
 
 REM =============================================================================
-REM Step 7: Create qwen:7b-q4_K_M model
+REM Step 7: Create qwen3:4b-q4_K_M model
 REM =============================================================================
 echo ==============================================================
-echo   [7/8] Creating qwen:7b-q4_K_M model
+echo   [7/8] Creating qwen3:4b-q4_K_M model
 echo ==============================================================
 
-"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen:7b-q4_K_M" >nul 2>&1
+"%OLLAMA_BIN%" list 2>nul | findstr /C:"qwen3:4b-q4_K_M" >nul 2>&1
 if not errorlevel 1 (
-    echo   [OK] qwen:7b-q4_K_M model already exists
+    echo   [OK] qwen3:4b-q4_K_M model already exists
 ) else (
     if not exist "%SCRIPT_DIR%ollama-models\Modelfile" (
         echo   [ERROR] ollama-models\Modelfile not found
@@ -272,29 +280,29 @@ if not errorlevel 1 (
     if not exist "%SCRIPT_DIR%ollama-models\*.gguf" (
         echo   [ERROR] No .gguf model file found in ollama-models\
         echo.
-        echo   Place qwen2.5-7b-instruct-q4_k_m.gguf in ollama-models\
-        echo   Download: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF
+        echo   Place qwen3-4b-instruct-q4_k_m.gguf in ollama-models\
+        echo   Download: https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF
         pause
         exit /b 1
     )
 
-    echo         Creating model from local GGUF file (~2-5 min^)...
-    "%OLLAMA_BIN%" create qwen:7b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
+    echo         Creating model from local GGUF file (~1-3 min^)...
+    "%OLLAMA_BIN%" create qwen3:4b-q4_K_M -f "%SCRIPT_DIR%ollama-models\Modelfile"
     if errorlevel 1 (
         echo   [ERROR] Model creation failed
         echo          Check that the GGUF filename matches the Modelfile FROM line.
-        echo          Expected: qwen2.5-7b-instruct-q4_k_m.gguf
+        echo          Expected: qwen3-4b-instruct-q4_k_m.gguf
         pause
         exit /b 1
     )
-    echo   [OK] qwen:7b-q4_K_M model created
+    echo   [OK] qwen3:4b-q4_K_M model created
 )
 
 REM Try to create embedding model (optional, failure is non-blocking)
 "%OLLAMA_BIN%" pull nomic-embed-text 2>nul
 if errorlevel 1 (
     echo   [INFO] Embedding model nomic-embed-text not available (requires internet^)
-    echo         RAG will use main model qwen:7b-q4_K_M for embeddings.
+    echo         RAG will use main model qwen3:4b-q4_K_M for embeddings.
 ) else (
     echo   [OK] nomic-embed-text ready
 )
@@ -322,7 +330,7 @@ if not exist "%SCRIPT_DIR%.env" (
         echo # Auto-generated on first deploy
         echo GRADIO_USER=admin
         echo GRADIO_PASS=!RANDOM_PASS!
-        echo COMAC_MODEL=qwen:7b-q4_K_M
+        echo COMAC_MODEL=qwen3:4b-q4_K_M
         echo COMAC_EMBED_MODEL=nomic-embed-text
         echo OLLAMA_HOST=127.0.0.1:11435
     ) > "%SCRIPT_DIR%.env"
@@ -350,7 +358,7 @@ echo   - Python:   3.!PYTHON_VER!
 echo   - .venv:    ready
 echo   - Ollama:   tools\ollama\ollama.exe (port: 11435^)
 echo   - Models:   ollama-cache\
-echo   - LLM:      qwen:7b-q4_K_M
+echo   - LLM:      qwen3:4b-q4_K_M
 echo   - Auth:     admin / ^(see .env^)
 echo.
 echo   Next steps:

@@ -129,10 +129,11 @@ header("4. Modelfile Integrity")
 with open(f"{PROJECT}/ollama-models/Modelfile", 'r', encoding='utf-8', errors='replace') as f:
     mf = f.read()
 
-check("Modelfile FROM line", "FROM ./qwen2.5-7b-instruct-q4_k_m.gguf" in mf)
+check("Modelfile FROM line", "FROM ./qwen3-4b-instruct-q4_k_m.gguf" in mf)
 check("Modelfile ASCII only", all(ord(c) < 128 for c in mf), "contains non-ASCII")
-check("temperature set", "temperature 0.3" in mf.lower())
-check("num_ctx set", "num_ctx 8192" in mf.lower())
+check("temperature set", "temperature 0.8" in mf.lower())
+check("num_ctx set", "num_ctx 32768" in mf.lower())
+check("num_gpu set", "num_gpu 99" in mf.lower())
 
 # ============================================================
 # TEST 5: merge_official.py test
@@ -229,11 +230,11 @@ try:
                           env={**os.environ, "OLLAMA_HOST": "127.0.0.1:11435"})
     
     check("Ollama service running", result.returncode == 0, result.stderr[:80])
-    check("Model qwen exists", "qwen" in result.stdout.lower(), result.stdout[:80])
+    check("Model qwen3 exists", "qwen3" in result.stdout.lower(), result.stdout[:80])
     
     # Test inference
     result = subprocess.run(
-        ["ollama.exe", "run", "qwen:7b-q4_K_M", "Say hello in one word"],
+        ["ollama.exe", "run", "qwen3:4b-q4_K_M", "Say hello in one word"],
         capture_output=True, text=True, timeout=120,
         env={**os.environ, "OLLAMA_HOST": "127.0.0.1:11435",
              "OLLAMA_MODELS": f"{PROJECT}/ollama-cache"}

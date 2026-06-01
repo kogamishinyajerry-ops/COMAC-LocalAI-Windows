@@ -125,7 +125,7 @@ class COMACAssistant:
         if mode == "simple":
             # 不使用RAG，直接问答
             client = OllamaClient(self.model)
-            return client.generate(f"请回答：{question}", temperature=0.3)
+            return client.generate(f"请回答：{question}")
 
         # 使用RAG
         return self.rag.query(question)

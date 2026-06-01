@@ -200,16 +200,21 @@ class OllamaRAG:
         """检测 embedding 模型是否可用，不可用则用主模型替代"""
         try:
             models = self._embed_client.list_models()
-            if self.embed_model in models:
+            # 模型名可能带 :latest 标签，做前缀/包含匹配
+            embed_available = any(
+                m == self.embed_model or m.startswith(self.embed_model + ':')
+                for m in models
+            )
+            if embed_available:
                 return True
-            # embedding 模型不可用，尝试用主模型
+            # embedding 模型不可用，尝试用主模型（Qwen3 不支持 embedding）
             print(f"[RAG] Embedding model '{self.embed_model}' not available, "
-                  f"will use main model '{self.llm_model}' for embeddings.")
+                  f"will use main model '{self.llm_model}' for embeddings. "
+                  f"Tip: run 'ollama pull nomic-embed-text'.")
             self._embed_client = OllamaClient(self.llm_model)
             return False
-        except Exception:
-            print(f"[RAG] Embedding model check failed, will use main model for embeddings.")
-            print(f"[RAG] Tip: run 'ollama pull nomic-embed-text' to install dedicated embedding model for better performance.")
+        except Exception as e:
+            print(f"[RAG] Embedding model check failed ({e}), will use main model for embeddings.")
             return False
 
     def _get_embedding(self, text: str) -> List[float]:
@@ -413,7 +418,7 @@ class OllamaRAG:
 回答："""
 
         try:
-            response = self._llm_client.generate(prompt, temperature=0.3)
+            response = self._llm_client.generate(prompt)
             return response
         except Exception as e:
             return f"生成回答失败: {e}"

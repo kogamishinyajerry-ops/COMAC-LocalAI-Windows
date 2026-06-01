@@ -6,16 +6,16 @@
       "apiKey": "ollama",
       "compat": {
         "supportsDeveloperRole": false,
-        "supportsReasoningEffort": false
+        "supportsReasoningEffort": true
       },
       "models": [
         {
-          "id": "qwen:7b-q4_K_M",
-          "name": "qwen:7b-q4_K_M (Qwen2.5-7B Q4_K_M)",
-          "reasoning": false,
+          "id": "qwen3:4b-q4_K_M",
+          "name": "qwen3:4b-q4_K_M (Qwen3-4B Q4_K_M, 性能≈Qwen2.5-7B)",
+          "reasoning": true,
           "input": ["text"],
-          "contextWindow": 8192,
-          "maxTokens": 2048,
+          "contextWindow": 32768,
+          "maxTokens": 4096,
           "cost": {
             "input": 0,
             "output": 0,

@@ -88,8 +88,8 @@ if __name__ == "__main__":
     # Find shard files
     import glob as g
     patterns = [
-        "ollama-models/qwen2.5-7b-instruct-q4_k_m-*-of-*.gguf",
-        "qwen2.5-7b-instruct-q4_k_m-*-of-*.gguf",
+        "ollama-models/qwen3-4b-instruct-q4_k_m-*-of-*.gguf",
+        "qwen3-4b-instruct-q4_k_m-*-of-*.gguf",
     ]
     shards = []
     for p in patterns:

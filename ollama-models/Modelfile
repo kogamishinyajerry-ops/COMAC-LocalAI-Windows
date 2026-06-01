@@ -1,10 +1,22 @@
 # COMAC-LocalAI-Windows Ollama Modelfile
-# Model: Qwen2.5-7B-Instruct Q4_K_M (~4.7GB)
-# Usage: ollama create qwen:7b-q4_K_M -f Modelfile
+# Model: Qwen3-4B-Instruct Q4_K_M (~2.5GB, 性能匹配 Qwen2.5-7B)
+# Usage: ollama create qwen3:4b-q4_K_M -f Modelfile
+#
+# 防重复策略: 低温 + 短输出 + 强系统提示词
 
-FROM ./qwen2.5-7b-instruct-q4_k_m.gguf
+FROM ./qwen3-4b-instruct-q4_k_m.gguf
 
-PARAMETER temperature 0.3
-PARAMETER num_ctx 8192
-PARAMETER num_predict 2048
+PARAMETER temperature 0.5
+PARAMETER top_p 0.9
+PARAMETER top_k 50
+PARAMETER num_ctx 32768
+PARAMETER num_predict 1024
+PARAMETER num_gpu 99
 PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|endoftext|>"
+
+SYSTEM """你是中国商飞(COMAC)的专业文档助手。规则：
+1. 直接给出最终答案，不反问、不自问自答。
+2. 每个回答控制在150字以内，冗长即删。
+3. 不重复任何已说过的内容。
+4. 输出格式简洁，不要用（注：）或（答案：）前缀。"""

@@ -26,7 +26,7 @@
 ### 前置条件
 - Python 3.11+（[下载地址](https://www.python.org/ftp/python/)）
 - 互联网连接
-- 磁盘空间 15GB+
+- 磁盘空间 10GB+
 
 ### 操作步骤
 
@@ -40,7 +40,7 @@
    [2/6] 安装 Python 依赖（gradio、ollama、pandas 等）
    [3/6] 初始化 Ollama
    [4/6] 启动 Ollama 服务
-   [5/6] 下载 qwen:7b-q4_K_M 模型（约 4.5 GB）
+   [5/6] 下载 qwen3:4b-q4_K_M 模型（约 2.5 GB）
    [6/6] 初始化配置
 
 4. 记住屏幕显示的 Python 版本号（例如 Python 3.11）
@@ -55,7 +55,7 @@
 ### 前置条件
 - Python 3.11+（**版本必须与 Phase 1 一致**）
 - 内存 16GB+
-- 磁盘 15GB+
+- 磁盘 10GB+
 
 ### 操作步骤
 
@@ -80,7 +80,7 @@
 |------|------|------|
 | `.venv/` | ~1GB | Python 虚拟环境，含所有依赖 |
 | `tools/ollama/` | ~500MB | Ollama 可执行文件 |
-| Ollama 模型缓存 | ~5GB | qwen:7b-q4_K_M 模型 |
+| Ollama 模型缓存 | ~2.5GB | qwen3:4b-q4_K_M 模型 |
 | `ollama-models/` | 可选 | GGUF 文件（用于离线创建模型） |
 
 ---
@@ -120,8 +120,8 @@ winget download --id Python.Python.3.11 -o .\
 ### Q: 模型下载失败怎么办？
 
 手动下载 GGUF 文件：
-1. 访问 https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF
-2. 下载 `qwen2.5-7b-instruct-q4_k_m.gguf`（约 4.5GB）
+1. 访问 https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF
+2. 下载 `qwen3-4b-instruct-q4_k_m.gguf`（约 2.5GB）
 3. 放入项目的 `ollama-models/` 目录
 4. 运行 `setup.bat`
 

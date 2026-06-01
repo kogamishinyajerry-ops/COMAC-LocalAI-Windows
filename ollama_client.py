@@ -62,6 +62,143 @@ class PathValidationError(Exception):
     pass
 
 
+class CleanResponse:
+    """Qwen3-4B 响应后处理：清理自问自答、重复段落、冗余前缀"""
+    
+    # 需要移除的行模式 (正则)
+    _REMOVE_PATTERNS = [
+        r'^（注：.*?）\s*$',           # 中文括号注释
+        r'^\(注：.*?\)\s*$',           # 英文括号注释
+        r'^答案[：:].*',               # "答案："前缀
+        r'^最终答案[：:].*',           # "最终答案："前缀
+        r'^综上[，,].*',              # "综上，"前缀
+        r'^这个数据是否准确[？?]',      # 自问
+        r'^这句话是否(准确|正确)[？?]',     # 自问变体
+        r'^C919的航程[是为].*',        # 高频重复模式
+        r'^（注：.*$',                # 注：开头行
+        r'^\(注：.*$',                # 注：开头行(英文)
+        r'^.*的(研制|发展|生产).*(目标|背景|意义|过程|成果|影响).*[？?]$',  # 自问QA模式
+        r'^但需注意，实际.*?$',         # "但需注意" 啰嗦开头
+        r'^不过，也有.*?$',            # "不过，也有" 啰嗦开头
+    ]
+    
+    # 需要截断的模式 (匹配后只保留该行之前的内容)
+    _TRUNCATE_PATTERNS = [
+        r'^.*的(研制|发展).*(目标|背景|意义).*[？?]',  # 自问QA开始
+        r'^C919.*的研制(目标|背景|意义)',              # 变体
+        r'^这句话是否(准确|正确)[？?]',               # 自我审查
+        r'^你的这句话.*[？?]',                         # 自我审查变体
+        r'^\*\*修改后[：:]\*\*',                      # "**修改后：**" 自我修改开始
+        r'^\*\*修改说明[：:]\*\*',                    # "**修改说明：**" 
+        r'^你的这句话.*[。.]$',                        # "你的这句话..." 自我审查
+    ]
+    
+    # 需要从行尾移除的括号注释
+    _STRIP_PARENS = [
+        (r'（注：.*?）$', ''),         # 中文括号注释
+        (r'\(注：.*?\)$', ''),         # 英文括号注释
+    ]
+    
+    @classmethod
+    def clean(cls, text: str) -> str:
+        """清理模型输出"""
+        if not text:
+            return text
+        
+        lines = text.strip().split('\n')
+        cleaned = []
+        seen = set()  # 用于去重
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                if cleaned and cleaned[-1]:
+                    cleaned.append('')
+                continue
+            
+            # 检查截断模式 - 遇到自问QA开始就停止
+            should_truncate = False
+            for pattern in cls._TRUNCATE_PATTERNS:
+                if re.match(pattern, line):
+                    should_truncate = True
+                    break
+            
+            if should_truncate:
+                break  # 停止处理后续行
+            
+            # 检查是否匹配移除模式
+            should_skip = False
+            for pattern in cls._REMOVE_PATTERNS:
+                if re.match(pattern, line):
+                    should_skip = True
+                    break
+            
+            if should_skip:
+                continue
+            
+            # 从行尾去除括号注释
+            for pattern, replacement in cls._STRIP_PARENS:
+                line = re.sub(pattern, replacement, line).strip()
+            
+            # 去重：跳过已出现的行
+            normalized = line.strip().strip('。. ')
+            if normalized and normalized in seen:
+                continue
+            if normalized:
+                seen.add(normalized)
+            
+            cleaned.append(line)
+        
+        # 移除尾部空行
+        while cleaned and not cleaned[-1]:
+            cleaned.pop()
+        
+        # 全文级重复检测：如果 cleaned 结果是多行重复，只保留第一段
+        result = '\n'.join(cleaned)
+        
+        # 检测重复：按句号拆分，取前 N 句中的第一个有意义段落
+        sentences = re.split(r'[。！？]', result)
+        if len(sentences) > 3:
+            # 检查是否有大量重复句子
+            unique_sentences = []
+            seen_sent = set()
+            for s in sentences:
+                s = s.strip()
+                if not s:
+                    continue
+                # 检测自我审查模式
+                if re.search(r'(这个|这句|该).*(数据|说法|回答|表述|句子).*(是否|对不对|准确|正确|可靠)', s):
+                    break  # 遇到自我审查，停止
+                if s in seen_sent:
+                    continue
+                seen_sent.add(s)
+                unique_sentences.append(s)
+            
+            # 如果大部分句子是重复的，只保留前几个不重复的
+            if len(unique_sentences) < len(sentences) * 0.4:
+                result = '。'.join(unique_sentences[:3]) + ('。' if unique_sentences[:3] else '')
+                return result
+        
+        # 如果清理后变空，返回原文
+        if not result.strip():
+            return text
+        
+        # 如果清理后仍很长 (chat 循环)，只取第一段
+        MAX_CLEAN_CHARS = 500
+        if len(result) > MAX_CLEAN_CHARS:
+            # 找到第一个有意义的段落断点
+            first_break = len(result)
+            for sep in ['\n\n', '\n', '。', '；']:
+                pos = result.find(sep)
+                if 50 < pos < first_break:
+                    first_break = pos + len(sep)
+            
+            if first_break < len(result):
+                result = result[:first_break].strip()
+        
+        return result
+
+
 class OllamaClient:
     def __init__(self, model: str = MODEL_DOC):
         self.model = model
@@ -79,7 +216,8 @@ class OllamaClient:
         system: Optional[str] = None,
         stream: bool = False,
         temperature: float = None,
-        num_predict: int = 2048
+        num_predict: int = 1024,
+        enable_thinking: bool = True,
     ) -> str:
         """
         使用Ollama模型生成文本。
@@ -90,6 +228,7 @@ class OllamaClient:
             stream: 是否流式输出
             temperature: 温度参数（默认根据模型自动设置）
             num_predict: 最大生成token数
+            enable_thinking: 是否启用 Qwen3 Thinking 模式（深度思考，默认关闭）
 
         Returns:
             生成的文本内容
@@ -97,14 +236,21 @@ class OllamaClient:
         if not prompt or not prompt.strip():
             return "[错误] 输入不能为空"
 
-        # 统一温度 0.3 (单 7B 模型，不区分 deepseek/qwen)
+        # Qwen3-4B 优化温度: 0.5 (平衡准确性与防重复)
         if temperature is None:
-            temperature = 0.3
+            temperature = 0.5
 
         options = {
             "temperature": temperature,
             "num_predict": num_predict,
+            # num_gpu 由 Modelfile 控制，不硬编码
         }
+        
+        # Qwen3 Thinking 模式: 开启后模型先内部推理再输出
+        if enable_thinking:
+            options["enable_thinking"] = True
+            # Thinking 模式下增加输出长度以容纳思考内容
+            options["num_predict"] = max(num_predict, 2048)
 
         try:
             if system:
@@ -122,7 +268,7 @@ class OllamaClient:
                     options=options,
                     stream=stream
                 )
-            return response['response']
+            return CleanResponse.clean(response['response'])
         except Exception as e:
             raise RuntimeError(_human_readable_error(e, "文本生成")) from e
 
@@ -130,7 +276,8 @@ class OllamaClient:
         self,
         messages: List[Dict[str, str]],
         system: Optional[str] = None,
-        temperature: float = None
+        temperature: float = None,
+        enable_thinking: bool = True,
     ) -> str:
         """
         使用Ollama模型进行对话。
@@ -139,12 +286,13 @@ class OllamaClient:
             messages: 对话消息列表，格式为 [{"role": "user", "content": "..."}]
             system: 系统提示词（可选）
             temperature: 温度参数（默认根据模型自动设置）
+            enable_thinking: 是否启用 Qwen3 Thinking 模式
 
         Returns:
             模型回复的文本内容
         """
         if temperature is None:
-            temperature = 0.3
+            temperature = 0.5
 
         if system:
             full_messages = [{"role": "system", "content": system}] + messages
@@ -152,13 +300,22 @@ class OllamaClient:
             full_messages = messages
 
         try:
+            opts = {
+                "temperature": temperature,
+                "num_predict": 512,
+                "num_ctx": DEFAULT_NUM_CTX,
+            }
+            if enable_thinking:
+                opts["enable_thinking"] = True
+                opts["num_predict"] = 2048
+            
             response = ollama.chat(
                 model=self.model,
                 messages=full_messages,
-                options={"temperature": temperature},
+                options=opts,
                 stream=False
             )
-            return response['message']['content']
+            return CleanResponse.clean(response['message']['content'])
         except Exception as e:
             raise RuntimeError(_human_readable_error(e, "对话生成")) from e
 
@@ -258,7 +415,7 @@ class PathValidator:
 
 
 class ModelRouter:
-    """单模型路由 — 所有任务统一使用 qwen:7b-q4_K_M"""
+    """单模型路由 — 所有任务统一使用 qwen3:4b-q4_K_M"""
 
     def __init__(self):
         self.client = OllamaClient(MODEL_DOC)

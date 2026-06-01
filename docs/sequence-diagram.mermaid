@@ -30,7 +30,7 @@ sequenceDiagram
         I->>Ollama: curl http://localhost:11435/api/version
     end
     Ollama-->>I: 服务就绪
-    I->>Ollama: ollama create qwen:7b-q4_K_M -f ollama-models/Modelfile
+    I->>Ollama: ollama create qwen3:4b-q4_K_M -f ollama-models/Modelfile
     Ollama-->>I: 模型创建完成
     I->>FS: 写入 .env (OLLAMA_HOST=localhost:11435 + 随机密码)
     I-->>User: ✅ 离线安装完成！请运行 start.bat

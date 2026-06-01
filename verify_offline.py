@@ -26,7 +26,7 @@ def check_ollama():
             elif isinstance(m, str):
                 model_names.append(m)
 
-        required = ['qwen:7b-q4_K_M']
+        required = ['qwen3:4b-q4_K_M']
 
         for model in required:
             if model in model_names:

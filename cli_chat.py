@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 OpenCode TUI — COMAC 离轴线AI文档处理平台
-驱动模型: qwen:7b-q4_K_M
+驱动模型: qwen3:4b-q4_K_M
 
 用法:
-  python cli_chat.py                       # 默认模型 qwen:7b-q4_K_M
-  python cli_chat.py --model qwen:7b-q4_K_M  # 指定模型
+  python cli_chat.py                       # 默认模型 qwen3:4b-q4_K_M
+  python cli_chat.py --model qwen3:4b-q4_K_M  # 指定模型
   python cli_chat.py --system "你是一个..."   # 自定义系统提示词
 """
 
@@ -55,19 +55,21 @@ def _load_config():
     if _cfg is not None:
         return _cfg
     try:
-        from config import MODEL_DOC, OLLAMA_HOST, DEFAULT_NUM_CTX, DEFAULT_NUM_PREDICT
+        from config import MODEL_DOC, OLLAMA_HOST, DEFAULT_NUM_CTX, DEFAULT_NUM_PREDICT, DEFAULT_NUM_GPU
         _cfg = {
             "model": MODEL_DOC,
             "host": OLLAMA_HOST,
             "ctx": DEFAULT_NUM_CTX,
             "predict": DEFAULT_NUM_PREDICT,
+            "num_gpu": DEFAULT_NUM_GPU,
         }
     except Exception:
         _cfg = {
-            "model": os.environ.get("COMAC_MODEL", "qwen:7b-q4_K_M"),
+            "model": os.environ.get("COMAC_MODEL", "qwen3:4b-q4_K_M"),
             "host": os.environ.get("OLLAMA_HOST", "127.0.0.1:11435"),
-            "ctx": 8192,
-            "predict": 2048,
+            "ctx": 32768,
+            "predict": 4096,
+            "num_gpu": 99,
         }
     return _cfg
 
@@ -96,8 +98,9 @@ def chat_stream(
             messages=full_messages,
             stream=True,
             options={
-                "temperature": 0.3,
+                "temperature": 0.5,
                 "num_ctx": _load_config()["ctx"],
+                "num_gpu": _load_config().get("num_gpu", 99),
             },
         )
         for chunk in response:
@@ -155,7 +158,7 @@ def handle_special_cmd(text: str, messages: List[Dict], current_model: str) -> O
   {Fore.GREEN}/clear{Style.RESET_ALL}       — 清屏
   {Fore.GREEN}/history{Style.RESET_ALL}     — 查看对话历史
   {Fore.GREEN}/help{Style.RESET_ALL}        — 显示帮助
-  {Fore.GREEN}/model <m>{Style.RESET_ALL}   — 切换模型（示例: /model qwen:7b-q4_K_M）
+  {Fore.GREEN}/model <m>{Style.RESET_ALL}   — 切换模型（示例: /model qwen3:4b-q4_K_M）
 
   直接输入内容即可对话。
   按 {Fore.YELLOW}Ctrl+C{Style.RESET_ALL} 可随时终止生成。
@@ -165,7 +168,7 @@ def handle_special_cmd(text: str, messages: List[Dict], current_model: str) -> O
     elif cmd.startswith("/model "):
         new_model = text.strip()[7:].strip()
         if not new_model:
-            print(f"{Fore.RED}[错误] 请指定模型名，如: /model qwen:7b-q4_K_M{Style.RESET_ALL}")
+            print(f"{Fore.RED}[错误] 请指定模型名，如: /model qwen3:4b-q4_K_M{Style.RESET_ALL}")
             return ""
         print(f"{Fore.GREEN}[模型切换] 当前模型: {new_model}{Style.RESET_ALL}")
         return new_model  # 返回新模型名
@@ -183,7 +186,7 @@ def main():
         epilog="""
 示例:
   python cli_chat.py
-  python cli_chat.py --model qwen:7b-q4_K_M
+  python cli_chat.py --model qwen3:4b-q4_K_M
   python cli_chat.py --system "你是一个航空领域专家"
         """,
     )
@@ -191,7 +194,7 @@ def main():
         "--model",
         "-m",
         default=None,
-        help=f"指定模型（默认: qwen:7b-q4_K_M）",
+        help=f"指定模型（默认: qwen3:4b-q4_K_M）",
     )
     parser.add_argument(
         "--system",
